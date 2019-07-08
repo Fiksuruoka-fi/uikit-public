@@ -13,28 +13,32 @@ module.exports = {
     },
     "globals": {
         "BUNDLED": true,
-        "VERSION": true
+        "VERSION": true,
+        "ICONS": []
     },
     "rules": {
+        "arrow-parens": ["error", "as-needed"],
         "brace-style": ["error", "1tbs", {"allowSingleLine": true}],
+        "comma-dangle": ["error", "never"],
         "comma-spacing": "error",
         "comma-style": "error",
-        "eqeqeq": ["off", "smart"],
+        "eqeqeq": ["error", "smart"],
+        "eol-last": "error",
         "indent": "off",
         "indent-legacy": ["error", 4, {"SwitchCase": 1}],
         "key-spacing": "error",
         "keyword-spacing": "error",
         "linebreak-style": ["error", "unix"],
         "no-array-constructor": "error",
+        "no-case-declarations": "warn",
         "no-console": "off",
         "no-duplicate-imports": "error",
         "no-empty": ["error", {"allowEmptyCatch": true}],
         "no-extend-native": "error",
-        "no-case-declarations": "warn",
         "no-lone-blocks": "error",
         "no-lonely-if": "error",
         "no-multi-spaces": "error",
-        "no-multiple-empty-lines": "error",
+        "no-multiple-empty-lines": ["error", {"max": 2, "maxEOF": 1, "maxBOF": 0}],
         "no-template-curly-in-string": "error",
         "no-trailing-spaces": "error",
         "no-unused-vars": ["error", {"vars": "local", "args": "none"}],
@@ -46,10 +50,11 @@ module.exports = {
         "quotes": ["error", "single", {"avoidEscape": true}],
         "semi": ["error", "always"],
         "space-before-blocks": "error",
+        "space-before-function-paren": ["error", {"anonymous": "always", "named": "never", "asyncArrow": "always"}],
         "space-in-parens": "error",
         "space-infix-ops": "error",
         "space-unary-ops": "error",
-        "template-curly-spacing": "error"
+        "spaced-comment": "error",
+        "template-curly-spacing": "error",
     }
-
 };

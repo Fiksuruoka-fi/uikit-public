@@ -1,32 +1,36 @@
 import LightboxPanel from './lightbox-panel';
-import {$$, assign, data, index, isFunction} from 'uikit-util';
-
-const props = merge(LightboxPanel, 'props');
-const defaults = merge(LightboxPanel, 'data');
+import {$$, assign, data, findIndex, on, uniqueBy} from 'uikit-util';
 
 export default {
 
     install,
 
-    attrs: true,
+    props: {toggle: String},
 
-    props: assign({toggle: String}, props),
-
-    data: assign({toggle: 'a'}, Object.keys(props).reduce((data, key) => {
-        data[key] = defaults[key];
-        return data;
-    }, {})),
+    data: {toggle: 'a'},
 
     computed: {
 
-        toggles({toggle}, $el) {
-            return $$(toggle, $el);
+        toggles: {
+
+            get({toggle}, $el) {
+                return $$(toggle, $el);
+            },
+
+            watch() {
+                this.hide();
+            }
+
+        },
+
+        items() {
+            return uniqueBy(this.toggles.map(toItem), 'source');
         }
 
     },
 
     disconnected() {
-        this._destroy();
+        this.hide();
     },
 
     events: [
@@ -41,59 +45,21 @@ export default {
 
             handler(e) {
                 e.preventDefault();
-                e.current.blur();
-                this.show(index(this.toggles, e.current));
+                const src = data(e.current, 'href');
+                this.show(findIndex(this.items, ({source}) => source === src));
             }
 
         }
 
     ],
 
-    update(data) {
-
-        data.toggles = data.toggles || this.toggles;
-
-        if (this.panel && this.animation) {
-            this.panel.$props.animation = this.animation;
-            this.panel.$emit();
-        }
-
-        if (!this.panel || isEqualList(data.toggles, this.toggles)) {
-            return;
-        }
-
-        data.toggles = this.toggles;
-        this._destroy();
-        this._init();
-
-    },
-
     methods: {
-
-        _init() {
-            return this.panel = this.panel || this.$create('lightboxPanel', assign({}, this.$props, {
-                items: this.toggles.reduce((items, el) => {
-                    items.push(['href', 'caption', 'type', 'poster', 'alt'].reduce((obj, attr) => {
-                        obj[attr === 'href' ? 'source' : attr] = data(el, attr);
-                        return obj;
-                    }, {}));
-                    return items;
-                }, [])
-            }));
-        },
-
-        _destroy() {
-            if (this.panel) {
-                this.panel.$destroy(true);
-                this.panel = null;
-            }
-        },
 
         show(index) {
 
-            if (!this.panel) {
-                this._init();
-            }
+            this.panel = this.panel || this.$create('lightboxPanel', assign({}, this.$props, {items: this.items}));
+
+            on(this.panel.$el, 'hidden', () => this.panel = false);
 
             return this.panel.show(index);
 
@@ -109,20 +75,22 @@ export default {
 
 };
 
-function isEqualList(listA, listB) {
-    return listA.length === listB.length
-        && listA.every((el, i) => el === listB[i]);
-}
+function install(UIkit, Lightbox) {
 
-function merge(options, prop) {
-    return assign(
-        {},
-        ...(options.mixins ? options.mixins.map(mixin => merge(mixin, prop)) : []),
-        isFunction(options[prop]) ? options[prop]() : options[prop]);
-}
-
-function install(UIkit) {
     if (!UIkit.lightboxPanel) {
         UIkit.component('lightboxPanel', LightboxPanel);
     }
+
+    assign(
+        Lightbox.props,
+        UIkit.component('lightboxPanel').options.props
+    );
+
+}
+
+function toItem(el) {
+    return ['href', 'caption', 'type', 'poster', 'alt'].reduce((obj, attr) => {
+        obj[attr === 'href' ? 'source' : attr] = data(el, attr);
+        return obj;
+    }, {});
 }

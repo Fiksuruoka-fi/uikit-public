@@ -1,5 +1,477 @@
 # Changelog
 
+## 3.1.6 (June 19, 2019)
+
+### Added
+
+- Add style for input with datalist
+
+### Fixed
+
+- Fix image shrinking in centered and absolutely positioned navbars
+- Fix Custom Form not resetting on form `reset` event
+- Fix leader inverse hook
+- Fix divider vertical inverse hook
+
+## 3.1.5 (May 17, 2019)
+
+### Added
+
+- Add link toggle to Link component
+- Add breakpoint classes for margin auto and remove
+- Add Etsy icon
+
+### Fixed
+
+- Fix Dropbar closing unexpectedly
+- Fix Sortable `click` event prevention in Firefox
+- Fix JS error in Offcanvas component on touch devices
+- Icon components no longer have a primary option
+- Icon/Svg components no longer reset initially
+
+## 3.1.4 (April 24, 2019)
+
+### Fixed
+
+- Fix selector engine
+- Fix CSS selector in Lightbox component
+- Fix Drop not closing when Toggle component is clicked
+ 
+## 3.1.3 (April 23, 2019)
+
+### Fixed
+
+- Fix Scrollspy Nav component
+- Fix closing Lightbox causes text selection in Firefox
+
+## 3.1.2 (April 18, 2019)
+
+### Changed
+
+- IMPORTANT: Change `@deprecated` variable to `false`
+
+### Fixed
+
+- Fix filter controls active state in Filter component
+
+## 3.1.1 (April 18, 2019)
+
+### Fixed
+
+- Fix Sass distribution
+- Fix Lightbox opens with wrong index
+
+## 3.1.0 (April 17, 2019)
+
+### Added
+
+- Add deprecated flag to Less variables
+- Add size modifiers to Heading component
+- Add SVG stroke animation to Animation component
+- Add option to animate SVG strokes to SVG component
+- Add option to animate SVG strokes to Parallax component
+- Add support for more units to Parallax component
+- Add lazy loading support if Image component is used with SVG component
+- Add text secondary to Text component
+- Add `dataSrc` as primary option to Image component
+- Add `webp` as image type to Lightbox Panel component
+
+### Changed
+
+- Refactor divider, bullet and line modifiers in Heading component
+- Improve dimension handling in SVG component
+- Improve performance of Image, Leader and Toggle component
+- Autoplay is halted while Slideshow/Slider are active
+- Lightbox filters duplicate items by `source`
+- Rename `getPos` to `getEventPos`
+- Move code with side effects to `core.js`
+
+### Deprecated
+
+- Primary Heading: Use `uk-heading-medium` instead of `uk-heading-primary`
+- Hero Heading: Use `uk-heading-xlarge` instead of `uk-heading-hero`
+
+### Removed
+
+- `cls` option no longer accepts a list of classNames in Scrollspy component
+
+### Fixed
+
+- Fix rendering issue for scale in Transition component
+- Fix Filter component's initial active state
+- Fix translating `x` and `y` properties simultaneously in Parallax component
+- Fix drag closes Lightbox
+- Fix Tooltip component (touch device)
+- Fix `hover` mode for Toggle component (touch device)
+- Fix Slideshow not setting `min-height` if ratio is set to `false`
+- Default prevent `click` event in Slider/Slideshow component after drag
+- Fix images being selected while dragging in Slider/Slideshow component
+
+## 3.0.3 (January 29, 2019)
+
+### Added
+
+- Computeds can be watched now
+- Parallax supports `<SVG>` and its child elements now
+
+### Changed
+
+- Image Component uses IntersectionObserver now
+
+## Removed
+
+- Remove `isReady` function
+- Form Custom component no longer sets `uk-hover` and `uk-focus` classes
+
+### Fixed
+
+- Fix touch event detection
+- Fix background images are shown too large on retina displays in Img component
+- Fix correctly calculate offsetLeft in Img component
+- Fix autofocus elements not blurring within Toggable on hide
+
+## 3.0.2 (January 15, 2019)
+
+### Fixed
+
+- Fix offcanvas overlay transition
+- Fix active state in Switcher component
+- Fix background images on displays with higher devicePixelRatio in Img component
+
+## 3.0.1 (January 14, 2019)
+
+### Fixed
+
+- Fix Sass distribution
+
+## 3.0.0 (January 14, 2019)
+
+### Added
+
+- Add active states for sub nav items in Nav, Navbar and Dropdown component
+- Add emoji default fonts to the system font stack
+
+### Changed
+
+- Improve offcanvas reveal and push animations
+- Improve animation, transition and visibility toggles for touch devices
+- Improve update performance
+- `css` function: Setting a CSS property to `NaN` no longer removes the property
+- Slide/Slideshow navs and Drops no longer blur after hiding
+- Changed the default `toggle` option for Switcher component to `> * > :first-child`
+- SVG component no longer moves `id` from element to svg
+
+### Removed
+
+- Remove `uk-hover` class
+- Remove artificial `click` event on mobile devices
+
+### Fixed
+
+- Fix visible toggle and its child elments not being focusable through keyboard navigation
+- Fix Img component correctly escapes urls on background images
+
+## 3.0.0 rc 26 (January 3, 2019)
+
+### Added
+
+- Add expand classes to Container component
+
+### Changed
+
+- @notification-message-margin-bottom to top in Notification component
+- Improve swipe gesture detection
+- `isInView` checks relative to viewport only
+
+### Fixed
+
+- Fix `flex bug` mixin (IE 11)
+- Fix properly resolving css custom properties in scss
+- Fix order of variable assignments in scss
+- Fix background images are shown too large on retina displays in Img component
+- Fix lazy loading images in Img component in Safari
+- Limit positioned element to container width and margin in Position component
+
+## 3.0.0 rc 25 (November 30, 2018)
+
+### Fixed
+
+- Fix `hasClass` in IE11 again
+- Fix workaround to mitigate the duplicating icons issue
+
+## 3.0.0 rc 24 (November 23, 2018)
+
+### Changed
+
+- Drop positioning uses window as secondary boundary
+
+### Fixed
+
+- Fix modal not opening on first click in Angular apps
+- Fix filter controls active state in Filter component
+- Fix Masonry Grid in Rtl mode
+- Make sure autoplay does not resume after user interaction in slider-autoplay mixin
+- Fix `hasClass` in IE11
+
+## 3.0.0 rc 23 (November 16, 2018)
+
+### Changed
+
+- Destroy Lightbox Panel upon closing
+
+### Fixed
+
+- Fix sticky not recalculating after update
+- Fix clicking on items not triggering `click` event in Sortable component
+- Fix Offcanvas changing viewport upon opening
+
+## 3.0.0 rc 22 (November 9, 2018)
+
+### Fixed
+
+- Fix regressions in Modal component
+
+## 3.0.0 rc 21 (November 7, 2018)
+
+### Added
+
+- Add threshold before Sticky with `Show On Up` changes state
+- Add `draggable` option to Slider and Slideshow component
+
+### Fixed
+
+- Fix toggling Offcanvas component while transition in progress
+- Fix Offcanvas height on mobile devices
+
+## 3.0.0 rc 20 (October 24, 2018)
+
+### Added
+
+- Add print, reddit, mircrophone, file-text, file-pdf, chevron-double left and right icons
+- Add text emphasis to Text component
+- Add `src` as primary option to SVG component
+
+### Changed
+
+- Offcanvas no longer requires a wrapping content div
+- Change video-camera icon style to outline
+
+### Fixed
+
+- Fix sorting in Sortable component on touch devices with page scrolled down
+- Fix height of Masonry Grid
+- Fix Sticky hiding with Offcanvas in overlay mode
+- Fix Parallax in combination with Offcanvas in overlay mode
+
+## 3.0.0 rc 19 (October 11, 2018)
+
+### Fixed
+
+- Fix regression in Icon component
+
+## 3.0.0 rc 18 (October 11, 2018)
+
+### Added
+
+- Add divider vertical modifier to Divider component
+
+### Fixed
+
+- Fix preserve color not working if class is set on svg element in Icon component
+- Fix inverse hover color for accordion title
+- Fix close color being overwritten from toolbar in Lightbox component
+- Fix Modal not hiding upon being destroyed
+- Fix using node as offset in position mixin
+- Fix using Height Match component on elements with different offsetParents
+- Fix rounding error in Height Match component
+- Fix `scope` command for already scoped css, comments are removed from generated css files
+- Fix Sticky placeholder height on resize
+- Fix starting/stopping of autoplay in Lightbox
+- Fix initially wrong position of background image in Parallax component
+- Fix calling `isActive` on `undefined` in Navbar component
+
+## 3.0.0 rc 17 (September 27, 2018)
+
+### Added
+
+- Dom functions support selectors
+
+### Changed
+
+- Viewport Height component no longer sets a `height` except for IE
+- Viewport Height component no longer forces `box-sizing: border-box`
+- Improve Tooltip performance
+- Improve Parallax performance
+- Improve Sticky performance
+
+### Removed
+
+- Remove `::-moz-selection` which is not needed anymore
+- Remove component `init` hook
+- Remove component `ready` hook
+
+### Fixed
+
+- Fix `UIkit.mixin()`
+- Fix issue with list bullet in combination with multi column layouts
+- Allow for special characters in URI hash in Scroll Component
+- Height Match also sets a `height` in IE
+- Slideshow sets `min-height` instead of `height`
+
+
+## 3.0.0 rc 16 (September 12, 2018)
+
+### Fixed
+
+- Fix regression in Overflow Auto component
+
+## 3.0.0 rc 15 (September 11, 2018)
+
+### Changed
+
+- Rename `selModal` to `selContainer` and `selPanel` to `selContent` in Overflow Auto component
+
+### Fixed
+
+- Fix `isInView` function for elements with zero width and height
+
+## 3.0.0 rc 14 (September 4, 2018)
+
+### Fixed
+
+- Fix regression in `removeClasses` function
+
+## 3.0.0 rc 13 (September 4, 2018)
+
+### Added
+
+- Add border pill to Utility component
+
+### Changed
+
+- Use `min-height` instead of `height` for navbar nav items
+
+### Removed
+
+- Remove `filterAttr` function
+
+### Fixed
+
+- Fix SVGs not preserving their aspect ratio in IE11
+- Fix lazy loading images in Edge
+
+## 3.0.0 rc 12 (August 27, 2018)
+
+### Added
+
+- Add responsiveness to SVGs in Base component
+- Make remaining components reactive
+- Boolean attributes coerce to `true` if the prop is defined as Boolean
+
+### Changed
+
+- Allow icons to shrink in Iconnav
+- Add more margin between accordion title and icon
+- `UIkit.mixin` can now be used to extend existing components
+
+### Removed
+
+- Remove fix for uppercase SVGs attributes in Edge on Windows 10 older than build 16251
+
+### Fixed
+
+- Fix form placeholder color in Edge
+- Fix accordion icon position if title is wrapping into the next line
+- Fix Slider incorrectly showing navigation
+- Fix element queuing in Scrollspy component
+- Fix parallax translating to subpixels
+- Fix issue with scrolling on mobile devices in Sortable component
+
+## 3.0.0 rc 11 (August 8, 2018)
+
+### Changed
+
+- Pass error object to callback function instead of message only in Upload component
+
+### Removed
+
+- Remove deprecated prevention of the 300ms delay for touch devices
+
+### Fixed
+
+- Fix bug in `pointInRect` function
+
+## 3.0.0 rc 10 (July 25, 2018)
+
+### Added
+
+- Add container xsmall modifier
+
+### Changed
+
+- Improve Height Viewport component performance
+
+### Fixed
+
+- Fix performance regression in Grid component
+- Fix Height Viewport jumping in size on mobile devices if BottomOffset was set
+- Fix offsetParent detection
+
+## 3.0.0 rc 9 (July 13, 2018)
+
+### Changed
+
+- Allow thumbnav items to shrink if `flex-wrap: nowrap` is set
+
+### Fixed
+
+- Fix Filter component height during transition
+- Fix Filter/Sortable component in IE 11
+- Fix Overflow Auto component triggering `resize` event indefinitely
+- Fix Slider/Slideshow capture slide during transition in Safari 11
+- Fix Slider/Slideshow drag behavior in iOS 11.3+ (https://bugs.webkit.org/show_bug.cgi?id=184250)
+- Fix `toEventTargets` in IE 11
+
+## 3.0.0 rc 8 (July 5, 2018)
+
+### Fixed
+
+- Fix regression in dev dependencies
+
+## 3.0.0 rc 7 (July 5, 2018)
+
+### Added
+
+- Allow `data-` prefixed attributes as component options
+
+### Changed
+
+- Improve Image component performance
+- Improve Cover component performance
+- Improve resize reactivity on Image/Video load
+
+### Fixed
+
+- Fix Dropbar in Navbar in IE 11
+- Fix single components did not get exported from their modules
+- Fix Lightbox reactivity
+
+## 3.0.0 rc 6 (June 15, 2018)
+
+### Added
+
+- Add development builds to npm registry (`npm i uikit@dev` / `yarn add uikit@dev`)
+
+### Fixed
+
+- Fix single components to auto-install only when UIkit is attached to window object
+- Fix component naming (camelCase) in single component auto-install wrapper
+- Fix active row style for striped table
+- Fix height of Masonry Grid
+- Fix attribute change listener
+- Cover component updates on image load
+- Fix Lightbox options handling
+
 ## 3.0.0 rc 5 (June 4, 2018)
 
 ### Fixed
@@ -58,11 +530,11 @@
 ### Changed
 
 - Break long words into the next line for comment body
-- Moved grid `parallax` option to Grid component and removed Grid Parallax component
-- Moved Height, Leader, SVG and Video from Utility component into their own components
+- Move grid `parallax` option to Grid component and remove Grid Parallax component
+- Move Height, Leader, SVG and Video from Utility component into their own components
 - Allow left and right icons at the same time in form and search component
 - Rename `target` to `target-offset` in Sticky component
-- Removed hyphenating for text break
+- Remove hyphenating for text break
 
 ### Fixed
 
@@ -101,7 +573,7 @@
 
 ### Removed
 
-- Removed the instance method `$update`
+- Remove the instance method `$update`
 
 ### Fixed
 
@@ -167,7 +639,7 @@
 ### Changed
 
 - Add `uk-slider-container` class to clip the Slider component
-- Removed auto-clipping from Slider items. Use `uk-cover-container` instead.
+- Remove auto-clipping from Slider items. Use `uk-cover-container` instead.
 
 ### Fixed
 
@@ -759,7 +1231,7 @@
 
 ### Removed
 
-- Removed `uk-cover` CSS only solution
+- Remove `uk-cover` CSS only solution
 
 ### Fixed
 

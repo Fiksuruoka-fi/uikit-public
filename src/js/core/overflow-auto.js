@@ -1,18 +1,28 @@
 import Class from '../mixin/class';
-import {closest, css, height, trigger} from 'uikit-util';
+import {closest, css, height, offset, toFloat, trigger} from 'uikit-util';
 
 export default {
 
     mixins: [Class],
 
+    props: {
+        selContainer: String,
+        selContent: String
+    },
+
+    data: {
+        selContainer: '.uk-modal',
+        selContent: '.uk-modal-dialog'
+    },
+
     computed: {
 
-        modal(_, $el) {
-            return closest($el, '.uk-modal');
+        container({selContainer}, $el) {
+            return closest($el, selContainer);
         },
 
-        panel(_, $el) {
-            return closest($el, '.uk-modal-dialog');
+        content({selContent}, $el) {
+            return closest($el, selContent);
         }
 
     },
@@ -23,21 +33,26 @@ export default {
 
     update: {
 
-        write() {
+        read() {
 
-            if (!this.panel || !this.modal) {
-                return;
+            if (!this.content || !this.container) {
+                return false;
             }
 
-            const current = css(this.$el, 'maxHeight');
+            return {
+                current: toFloat(css(this.$el, 'maxHeight')),
+                max: Math.max(150, height(this.container) - (offset(this.content).height - height(this.$el)))
+            };
+        },
 
-            css(css(this.$el, 'maxHeight', 150), 'maxHeight', Math.max(150, 150 + height(this.modal) - this.panel.offsetHeight));
-            if (current !== css(this.$el, 'maxHeight')) {
+        write({current, max}) {
+            css(this.$el, 'maxHeight', max);
+            if (Math.round(current) !== Math.round(max)) {
                 trigger(this.$el, 'resize');
             }
         },
 
-        events: ['load', 'resize']
+        events: ['resize']
 
     }
 

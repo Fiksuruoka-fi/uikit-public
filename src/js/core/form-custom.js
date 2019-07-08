@@ -1,5 +1,5 @@
 import Class from '../mixin/class';
-import {$, $$, includes, isInput, matches, query, selInput, toggleClass} from 'uikit-util';
+import {$, $$, closest, isInput, matches, query, selInput} from 'uikit-util';
 
 export default {
 
@@ -60,31 +60,23 @@ export default {
     events: [
 
         {
-
-            name: 'focusin focusout mouseenter mouseleave',
-
-            delegate: selInput,
-
-            handler({type, current}) {
-                if (current === this.input) {
-                    toggleClass(
-                        this.state,
-                        `uk-${includes(type, 'focus') ? 'focus' : 'hover'}`,
-                        includes(['focusin', 'mouseenter'], type)
-                    );
-                }
-            }
-
-        },
-
-        {
-
             name: 'change',
 
             handler() {
                 this.$emit();
             }
+        },
 
+        {
+            name: 'reset',
+
+            el() {
+                return closest(this.$el, 'form');
+            },
+
+            handler() {
+                this.$emit();
+            }
         }
 
     ]

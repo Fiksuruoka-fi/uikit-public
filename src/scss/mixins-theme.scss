@@ -4,17 +4,18 @@
 
     overflow: hidden;
 
-    &::after {
+    &::before {
         content: "";
         width: ($accordion-title-line-height * 1em);
         height: ($accordion-title-line-height * 1em);
+        margin-left: $accordion-icon-margin-left;
         float: right;
         @include svg-fill($internal-accordion-close-image, "#000", $accordion-icon-color);
         background-repeat: no-repeat;
         background-position: 50% 50%;
     }
 
-    .uk-open > &::after { @include svg-fill($internal-accordion-open-image, "#000", $accordion-icon-color); }
+    .uk-open > &::before { @include svg-fill($internal-accordion-open-image, "#000", $accordion-icon-color); }
 
 }
 @mixin hook-accordion-title-hover(){}
@@ -25,9 +26,9 @@
 @mixin hook-inverse-accordion-title-hover(){}
 @mixin hook-inverse-component-accordion(){
 
-    .uk-accordion-title::after { @include svg-fill($internal-accordion-close-image, "#000", $inverse-global-color); }
+    .uk-accordion-title::before { @include svg-fill($internal-accordion-close-image, "#000", $inverse-global-color); }
 
-    .uk-open > .uk-accordion-title::after { @include svg-fill($internal-accordion-open-image, "#000", $inverse-global-color); }
+    .uk-open > .uk-accordion-title::before { @include svg-fill($internal-accordion-open-image, "#000", $inverse-global-color); }
 
 }
 @mixin hook-alert(){}
@@ -214,7 +215,12 @@
     h3, .uk-h3,
     h4, .uk-h4,
     h5, .uk-h5,
-    h6, .uk-h6 {
+    h6, .uk-h6,
+    .uk-heading-small,
+    .uk-heading-medium,
+    .uk-heading-large,
+    .uk-heading-xlarge,
+    .uk-heading-2xlarge {
         color: $inverse-base-heading-color;
         @if(mixin-exists(hook-inverse-base-heading)) {@include hook-inverse-base-heading();}
     }
@@ -722,10 +728,12 @@
 @mixin hook-divider-icon-line-left(){}
 @mixin hook-divider-icon-line-right(){}
 @mixin hook-divider-small(){}
+@mixin hook-divider-vertical(){}
 @mixin hook-divider-misc(){}
 @mixin hook-inverse-divider-icon(){}
 @mixin hook-inverse-divider-icon-line(){}
 @mixin hook-inverse-divider-small(){}
+@mixin hook-inverse-divider-vertical(){}
 @mixin hook-inverse-component-divider(){
 
     .uk-divider-icon {
@@ -742,6 +750,11 @@
     .uk-divider-small::after {
         border-top-color: $inverse-divider-small-border;
         @if(mixin-exists(hook-inverse-divider-small)) {@include hook-inverse-divider-small();}
+    }
+
+    .uk-divider-vertical {
+        border-left-color: $inverse-divider-vertical-border;
+        @if(mixin-exists(hook-inverse-divider-vertical)) {@include hook-inverse-divider-vertical();}
     }
 
 }
@@ -858,17 +871,24 @@
     // Placeholder
     //
 
-    .uk-input:-ms-input-placeholder { color: $inverse-form-placeholder-color !important; }
+    .uk-input::-ms-input-placeholder { color: $inverse-form-placeholder-color !important; }
     .uk-input::placeholder { color: $inverse-form-placeholder-color; }
 
-    .uk-textarea:-ms-input-placeholder { color: $inverse-form-placeholder-color !important; }
+    .uk-textarea::-ms-input-placeholder { color: $inverse-form-placeholder-color !important; }
     .uk-textarea::placeholder { color: $inverse-form-placeholder-color; }
 
     //
-    // Radio and checkbox
+    // Select
     //
 
     .uk-select:not([multiple]):not([size]) { @include svg-fill($internal-form-select-image, "#000", $inverse-form-select-icon-color); }
+
+    //
+    // Datalist
+    //
+
+    .uk-input[list]:hover,
+    .uk-input[list]:focus { @include svg-fill($internal-form-datalist-image, "#000", $inverse-form-datalist-icon-color); }
 
     //
     // Radio and checkbox
@@ -924,12 +944,21 @@
     .uk-grid-divider.uk-grid-stack > .uk-grid-margin::before { border-top-color: $inverse-grid-divider-border; }
 
 }
+@mixin hook-heading-small(){}
+@mixin hook-heading-medium(){}
+@mixin hook-heading-large(){}
+@mixin hook-heading-xlarge(){}
+@mixin hook-heading-2xlarge(){}
 @mixin hook-heading-primary(){}
 @mixin hook-heading-hero(){}
 @mixin hook-heading-divider(){}
 @mixin hook-heading-bullet(){}
 @mixin hook-heading-line(){}
 @mixin hook-heading-misc(){}
+@mixin hook-inverse-heading-small(){}
+@mixin hook-inverse-heading-medium(){}
+@mixin hook-inverse-heading-large(){}
+@mixin hook-inverse-heading-xlarge(){}
 @mixin hook-inverse-heading-primary(){}
 @mixin hook-inverse-heading-hero(){}
 @mixin hook-inverse-heading-divider(){}
@@ -937,13 +966,29 @@
 @mixin hook-inverse-heading-line(){}
 @mixin hook-inverse-component-heading(){
 
-    .uk-heading-primary {
+    .uk-heading-small {
+        @if(mixin-exists(hook-inverse-heading-small)) {@include hook-inverse-heading-small();}
+    }
+
+    .uk-heading-medium {
+        @if(mixin-exists(hook-inverse-heading-medium)) {@include hook-inverse-heading-medium();}
+    }
+
+    .uk-heading-large {
+        @if(mixin-exists(hook-inverse-heading-large)) {@include hook-inverse-heading-large();}
+    }
+
+    .uk-heading-xlarge {
+        @if(mixin-exists(hook-inverse-heading-xlarge)) {@include hook-inverse-heading-xlarge();}
+    }
+
+    .uk-heading-2xlarge {
         @if(mixin-exists(hook-inverse-heading-primary)) {@include hook-inverse-heading-primary();}
     }
 
-    .uk-heading-hero {
-        @if(mixin-exists(hook-inverse-heading-hero)) {@include hook-inverse-heading-hero();}
-    }
+    @if ($deprecated == true) { .uk-heading-primary { @if (mixin-exists(hook-inverse-heading-primary)) {@include hook-inverse-heading-primary();}}}
+
+    @if ($deprecated == true) { .uk-heading-hero { @if (mixin-exists(hook-inverse-heading-hero)) {@include hook-inverse-heading-hero();}}}
 
     .uk-heading-divider {
         border-bottom-color: $inverse-heading-divider-border;
@@ -968,7 +1013,7 @@
 @mixin hook-icon-link-active(){}
 @mixin hook-icon-button(){
     transition: 0.1s ease-in-out;
-    transition-property: color, background-color
+    transition-property: color, background-color;
 }
 @mixin hook-icon-button-hover(){}
 @mixin hook-icon-button-active(){}
@@ -1055,25 +1100,25 @@
 }
 @mixin hook-inverse-component-link(){
 
-    a.uk-link-muted,
+    .uk-link-muted,
     .uk-link-muted a {
         color: $inverse-link-muted-color;
         @if(mixin-exists(hook-inverse-link-muted)) {@include hook-inverse-link-muted();}
     }
 
-    a.uk-link-muted:hover,
+    .uk-link-muted:hover,
     .uk-link-muted a:hover {
         color: $inverse-link-muted-hover-color;
         @if(mixin-exists(hook-inverse-link-muted-hover)) {@include hook-inverse-link-muted-hover();}
     }
 
-    a.uk-link-text:hover,
+    .uk-link-text:hover,
     .uk-link-text a:hover {
         color: $inverse-link-text-hover-color;
         @if(mixin-exists(hook-inverse-link-text-hover)) {@include hook-inverse-link-text-hover();}
     }
 
-    a.uk-link-heading:hover,
+    .uk-link-heading:hover,
     .uk-link-heading a:hover {
         color: $inverse-link-heading-hover-color;
         @if(mixin-exists(hook-inverse-link-heading-hover)) {@include hook-inverse-link-heading-hover();}
@@ -1233,6 +1278,8 @@
     .uk-nav-default .uk-nav-sub a:hover,
     .uk-nav-default .uk-nav-sub a:focus { color: $inverse-nav-default-sublist-item-hover-color; }
 
+    .uk-nav-default .uk-nav-sub li.uk-active > a { color: $inverse-nav-default-sublist-item-active-color; }
+
     //
     // Primary
     //
@@ -1267,6 +1314,8 @@
 
     .uk-nav-primary .uk-nav-sub a:hover,
     .uk-nav-primary .uk-nav-sub a:focus { color: $inverse-nav-primary-sublist-item-hover-color; }
+
+    .uk-nav-primary .uk-nav-sub li.uk-active > a { color: $inverse-nav-primary-sublist-item-active-color; }
 
 }
 @mixin hook-inverse-component-navbar(){
@@ -1461,7 +1510,9 @@
     }
 
     .uk-text-muted { color: $inverse-text-muted-color !important; }
+    .uk-text-emphasis { color: $inverse-text-emphasis-color !important; }
     .uk-text-primary { color: $inverse-text-primary-color !important; }
+    .uk-text-secondary { color: $inverse-text-secondary-color !important; }
 
 }
 @mixin hook-inverse-component-utility(){
@@ -1530,7 +1581,7 @@
 @mixin hook-inverse-leader(){}
 @mixin hook-inverse-component-leader(){
 
-    .uk-leader-fill {
+    .uk-leader-fill::after {
         @if(mixin-exists(hook-inverse-leader)) {@include hook-inverse-leader();}
     }
 
@@ -1664,6 +1715,7 @@
 @mixin hook-navbar-toggle-icon(){}
 @mixin hook-navbar-toggle-icon-hover(){}
 @mixin hook-navbar-subtitle(){}
+@mixin hook-navbar-primary(){}
 @mixin hook-navbar-transparent(){}
 @mixin hook-navbar-sticky(){}
 @mixin hook-navbar-dropdown(){ box-shadow: $navbar-dropdown-box-shadow; }
@@ -1916,13 +1968,13 @@
 @mixin hook-table-cell(){}
 @mixin hook-table-footer(){}
 @mixin hook-table-caption(){}
-@mixin hook-table-row-active(){}
 @mixin hook-table-divider(){}
 @mixin hook-table-striped(){
     border-top: $table-striped-border-width solid $table-striped-border;
     border-bottom: $table-striped-border-width solid $table-striped-border;
 }
 @mixin hook-table-hover(){}
+@mixin hook-table-row-active(){}
 @mixin hook-table-small(){}
 @mixin hook-table-large(){}
 @mixin hook-table-misc(){

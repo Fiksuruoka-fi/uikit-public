@@ -49,7 +49,7 @@ export default {
 
 };
 
-function install (UIkit) {
+function install(UIkit) {
 
     UIkit.modal.dialog = function (content, options) {
 
@@ -63,7 +63,7 @@ function install (UIkit) {
 
         on(dialog.$el, 'hidden', ({target, currentTarget}) => {
             if (target === currentTarget) {
-                dialog.$destroy(true);
+                Promise.resolve(() => dialog.$destroy(true));
             }
         });
 

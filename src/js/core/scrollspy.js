@@ -1,11 +1,11 @@
-import {$$, addClass, css, data, filter, isInView, removeClass, toggleClass, trigger} from 'uikit-util';
+import {$$, addClass, css, data, filter, isInView, Promise, removeClass, toggleClass, trigger} from 'uikit-util';
 
 export default {
 
     args: 'cls',
 
     props: {
-        cls: 'list',
+        cls: String,
         target: String,
         hidden: Boolean,
         offsetTop: Number,
@@ -15,7 +15,7 @@ export default {
     },
 
     data: () => ({
-        cls: [],
+        cls: false,
         target: false,
         hidden: true,
         offsetTop: 0,
@@ -47,45 +47,44 @@ export default {
 
         {
 
-            read(els) {
+            read({update}) {
 
-                if (!els.delay) {
+                if (!update) {
                     return;
                 }
 
-                this.elements.forEach((el, i) => {
+                this.elements.forEach(el => {
 
-                    let elData = els[i];
+                    let state = el._ukScrollspyState;
 
-                    if (!elData || elData.el !== el) {
-                        const cls = data(el, 'uk-scrollspy-class');
-                        elData = {el, toggles: cls && cls.split(',') || this.cls};
+                    if (!state) {
+                        state = {cls: data(el, 'uk-scrollspy-class') || this.cls};
                     }
 
-                    elData.show = isInView(el, this.offsetTop, this.offsetLeft);
-                    els[i] = elData;
+                    state.show = isInView(el, this.offsetTop, this.offsetLeft);
+                    el._ukScrollspyState = state;
 
                 });
+
             },
 
-            write(els) {
+            write(data) {
 
                 // Let child components be applied at least once first
-                if (!els.delay) {
+                if (!data.update) {
                     this.$emit();
-                    return els.delay = true;
+                    return data.update = true;
                 }
 
-                let index = this.elements.length === 1 ? 1 : 0;
+                this.elements.forEach(el => {
 
-                this.elements.forEach((el, i) => {
+                    const state = el._ukScrollspyState;
+                    const {cls} = state;
 
-                    const elData = els[i];
-                    const cls = elData.toggles[i] || elData.toggles[0];
-
-                    if (elData.show && !elData.inview && !elData.timer) {
+                    if (state.show && !state.inview && !state.queued) {
 
                         const show = () => {
+
                             css(el, 'visibility', '');
                             addClass(el, this.inViewClass);
                             toggleClass(el, cls);
@@ -94,23 +93,43 @@ export default {
 
                             this.$update(el);
 
-                            elData.inview = true;
-                            delete elData.timer;
+                            state.inview = true;
+                            state.abort && state.abort();
                         };
 
-                        if (this.delay && index) {
-                            elData.timer = setTimeout(show, this.delay * index);
+                        if (this.delay) {
+
+                            state.queued = true;
+                            data.promise = (data.promise || Promise.resolve()).then(() => {
+                                return !state.inview && new Promise(resolve => {
+
+                                    const timer = setTimeout(() => {
+
+                                        show();
+                                        resolve();
+
+                                    }, data.promise || this.elements.length === 1 ? this.delay : 0);
+
+                                    state.abort = () => {
+                                        clearTimeout(timer);
+                                        resolve();
+                                        state.queued = false;
+                                    };
+
+                                });
+
+                            });
+
                         } else {
                             show();
                         }
 
-                        index++;
+                    } else if (!state.show && (state.inview || state.queued) && this.repeat) {
 
-                    } else if (!elData.show && elData.inview && this.repeat) {
+                        state.abort && state.abort();
 
-                        if (elData.timer) {
-                            clearTimeout(elData.timer);
-                            delete elData.timer;
+                        if (!state.inview) {
+                            return;
                         }
 
                         css(el, 'visibility', this.hidden ? 'hidden' : '');
@@ -121,7 +140,7 @@ export default {
 
                         this.$update(el);
 
-                        elData.inview = false;
+                        state.inview = false;
 
                     }
 
@@ -130,10 +149,11 @@ export default {
 
             },
 
-            events: ['scroll', 'load', 'resize']
+            events: ['scroll', 'resize']
 
         }
 
     ]
 
 };
+

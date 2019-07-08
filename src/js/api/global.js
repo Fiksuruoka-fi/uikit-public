@@ -1,4 +1,4 @@
-import {$, apply, createEvent, isString, mergeOptions, toNode} from 'uikit-util';
+import {$, apply, isString, mergeOptions, toNode} from 'uikit-util';
 
 export default function (UIkit) {
 
@@ -18,10 +18,7 @@ export default function (UIkit) {
 
     UIkit.mixin = function (mixin, component) {
         component = (isString(component) ? UIkit.component(component) : component) || this;
-        mixin = mergeOptions({}, mixin);
-        mixin.mixins = component.options.mixins;
-        delete component.options.mixins;
-        component.options = mergeOptions(mixin, component.options);
+        component.options = mergeOptions(component.options, mixin);
     };
 
     UIkit.extend = function (options) {
@@ -29,7 +26,7 @@ export default function (UIkit) {
         options = options || {};
 
         const Super = this;
-        const Sub = function UIkitComponent (options) {
+        const Sub = function UIkitComponent(options) {
             this._init(options);
         };
 
@@ -37,7 +34,7 @@ export default function (UIkit) {
         Sub.prototype.constructor = Sub;
         Sub.options = mergeOptions(Super.options, options);
 
-        Sub['super'] = Super;
+        Sub.super = Super;
         Sub.extend = Super.extend;
 
         return Sub;
@@ -45,10 +42,9 @@ export default function (UIkit) {
 
     UIkit.update = function (element, e) {
 
-        e = createEvent(e || 'update');
         element = element ? toNode(element) : document.body;
 
-        path(element).map(element => update(element[DATA], e));
+        path(element, element => update(element[DATA], e));
         apply(element, element => update(element[DATA], e));
 
     };
@@ -73,24 +69,18 @@ export default function (UIkit) {
         }
 
         for (const name in data) {
-            if (data[name]._isReady) {
+            if (data[name]._connected) {
                 data[name]._callUpdate(e);
             }
         }
 
     }
 
-    function path(element) {
-        const path = [];
-
-        while (element && element !== document.body && element.parentNode) {
-
-            element = element.parentNode;
-            path.unshift(element);
-
+    function path(node, fn) {
+        if (node && node !== document.body && node.parentNode) {
+            path(node.parentNode, fn);
+            fn(node.parentNode);
         }
-
-        return path;
     }
 
 }

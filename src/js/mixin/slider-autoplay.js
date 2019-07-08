@@ -1,4 +1,4 @@
-import {pointerDown} from 'uikit-util';
+import {attr, within} from 'uikit-util';
 
 export default {
 
@@ -15,11 +15,15 @@ export default {
     },
 
     connected() {
-        this.startAutoplay();
+        this.autoplay && this.startAutoplay();
     },
 
     disconnected() {
         this.stopAutoplay();
+    },
+
+    update() {
+        attr(this.slides, 'tabindex', '-1');
     },
 
     events: [
@@ -29,6 +33,10 @@ export default {
             name: 'visibilitychange',
 
             el: document,
+
+            filter() {
+                return this.autoplay;
+            },
 
             handler() {
                 if (document.hidden) {
@@ -42,17 +50,10 @@ export default {
 
         {
 
-            name: pointerDown,
-            handler: 'stopAutoplay'
-
-        },
-
-        {
-
             name: 'mouseenter',
 
             filter() {
-                return this.autoplay;
+                return this.autoplay && this.pauseOnHover;
             },
 
             handler() {
@@ -66,7 +67,7 @@ export default {
             name: 'mouseleave',
 
             filter() {
-                return this.autoplay;
+                return this.autoplay && this.pauseOnHover;
             },
 
             handler() {
@@ -83,19 +84,18 @@ export default {
 
             this.stopAutoplay();
 
-            if (this.autoplay) {
-                this.interval = setInterval(
-                    () => !(this.isHovering && this.pauseOnHover) && !this.stack.length && this.show('next'),
-                    this.autoplayInterval
-                );
-            }
+            this.interval = setInterval(
+                () => !within(document.activeElement, this.$el)
+                    && !this.isHovering
+                    && !this.stack.length
+                    && this.show('next'),
+                this.autoplayInterval
+            );
 
         },
 
         stopAutoplay() {
-            if (this.interval) {
-                clearInterval(this.interval);
-            }
+            this.interval && clearInterval(this.interval);
         }
 
     }

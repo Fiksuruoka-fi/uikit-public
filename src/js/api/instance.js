@@ -1,4 +1,4 @@
-import {hyphenate, remove, within} from 'uikit-util';
+import {hyphenate, isEmpty, remove, within} from 'uikit-util';
 
 export default function (UIkit) {
 
@@ -19,8 +19,6 @@ export default function (UIkit) {
         el[DATA][name] = this;
 
         this.$el = this.$options.el = this.$options.el || el;
-
-        this._callHook('init');
 
         if (within(el, document)) {
             this._callConnected();
@@ -52,7 +50,7 @@ export default function (UIkit) {
 
         delete el[DATA][name];
 
-        if (!Object.keys(el[DATA]).length) {
+        if (!isEmpty(el[DATA])) {
             delete el[DATA];
         }
 

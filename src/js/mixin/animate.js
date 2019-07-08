@@ -1,4 +1,4 @@
-import {addClass, append, assign, css, fastdom, height, includes, index, isVisible, noop, position, Promise, removeClass, toFloat, toNodes, Transition} from 'uikit-util';
+import {addClass, append, assign, css, fastdom, height, includes, index, isVisible, noop, position, Promise, removeClass, scrollTop, toFloat, toNodes, Transition} from 'uikit-util';
 
 const targetClass = 'uk-animation-target';
 
@@ -79,17 +79,18 @@ export default {
 
             addClass(this.target, targetClass);
             children.forEach((el, i) => propsFrom[i] && css(el, propsFrom[i]));
-            css(this.target, 'minHeight', oldHeight);
-            window.scroll(window.pageXOffset, oldScrollY);
+            css(this.target, 'height', oldHeight);
+            scrollTop(window, oldScrollY);
 
             return Promise.all(children.map((el, i) =>
                 propsFrom[i] && propsTo[i]
                     ? Transition.start(el, propsTo[i], this.animation, 'ease')
                     : Promise.resolve()
-            ).concat(Transition.start(this.target, {minHeight: newHeight}, this.animation, 'ease'))).then(() => {
+            ).concat(Transition.start(this.target, {height: newHeight}, this.animation, 'ease'))).then(() => {
                 children.forEach((el, i) => css(el, {display: propsTo[i].opacity === 0 ? 'none' : '', zIndex: ''}));
                 reset(this.target);
                 this.$update(this.target);
+                fastdom.flush(); // needed for IE11
             }, noop);
 
         }
@@ -122,7 +123,7 @@ function reset(el) {
         width: ''
     });
     removeClass(el, targetClass);
-    css(el, 'minHeight', '');
+    css(el, 'height', '');
 }
 
 function getPositionWithMargin(el) {
@@ -136,13 +137,14 @@ function getPositionWithMargin(el) {
 let style;
 
 function addStyle() {
-    if (!style) {
-        style = append(document.head, '<style>').sheet;
-        style.insertRule(
-            `.${targetClass} > * {
-                    margin-top: 0 !important;
-                    transform: none !important;
-                }`
-        );
+    if (style) {
+        return;
     }
+    style = append(document.head, '<style>').sheet;
+    style.insertRule(
+        `.${targetClass} > * {
+            margin-top: 0 !important;
+            transform: none !important;
+        }`, 0
+    );
 }

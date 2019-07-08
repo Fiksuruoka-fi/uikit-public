@@ -16,7 +16,7 @@ export default {
         name: String,
         params: Object,
         type: String,
-        url: String,
+        url: String
     },
 
     data: {
@@ -167,7 +167,7 @@ export default {
                         }
 
                     },
-                    e => this.error(e.message)
+                    e => this.error(e)
                 );
 
             };

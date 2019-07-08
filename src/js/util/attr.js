@@ -37,13 +37,9 @@ export function removeAttr(element, name) {
     element = toNodes(element);
     name.split(' ').forEach(name =>
         element.forEach(element =>
-            element.removeAttribute(name)
+            element.hasAttribute(name) && element.removeAttribute(name)
         )
     );
-}
-
-export function filterAttr(element, attribute, pattern, replacement) {
-    attr(element, attribute, value => value ? value.replace(pattern, replacement) : value);
 }
 
 export function data(element, attribute) {

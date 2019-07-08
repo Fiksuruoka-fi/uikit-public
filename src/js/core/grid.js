@@ -1,14 +1,12 @@
 import Margin from './margin';
 import Class from '../mixin/class';
-import {addClass, css, hasClass, height as getHeight, scrolledOver, toFloat, toggleClass, toNodes, sortBy} from 'uikit-util';
+import {addClass, css, hasClass, height as getHeight, isRtl, scrolledOver, toFloat, toggleClass, toNodes, Transition, sortBy} from 'uikit-util';
 
 export default {
 
     extends: Margin,
 
     mixins: [Class],
-
-    attrs: true,
 
     name: 'grid',
 
@@ -26,8 +24,12 @@ export default {
 
     computed: {
 
+        length(_, $el) {
+            return $el.children.length;
+        },
+
         parallax({parallax}) {
-            return Math.abs(parallax);
+            return parallax && this.length ? Math.abs(parallax) : '';
         }
 
     },
@@ -44,12 +46,18 @@ export default {
 
                 if (this.masonry || this.parallax) {
                     rows = rows.map(elements => sortBy(elements, 'offsetLeft'));
+
+                    if (isRtl) {
+                        rows.map(row => row.reverse());
+                    }
+
                 }
 
+                const transitionInProgress = rows.some(elements => elements.some(Transition.inProgress));
                 let translates = false;
-                let elHeight = false;
+                let elHeight = '';
 
-                if (this.masonry) {
+                if (this.masonry && this.length) {
 
                     let height = 0;
 
@@ -66,29 +74,28 @@ export default {
 
                 }
 
-                return {rows, translates, height: elHeight};
+                return {rows, translates, height: !transitionInProgress ? elHeight : false};
 
             },
 
-            write({rows, stacks, height}) {
+            write({stacks, height}) {
 
                 toggleClass(this.$el, this.clsStack, stacks);
 
-                css(this.$el, 'paddingBottom', this.parallax && rows.some(row => row.length > 1) ? this.parallax : '');
-
-                height && css(this.$el, 'minHeight', height);
+                css(this.$el, 'paddingBottom', this.parallax);
+                height !== false && css(this.$el, 'height', height);
 
             },
 
-            events: ['load', 'resize']
+            events: ['resize']
 
         },
 
         {
 
-            read({rows, height}) {
+            read({height}) {
                 return {
-                    scrolled: this.parallax && rows.some(row => row.length > 1)
+                    scrolled: this.parallax
                         ? scrolledOver(this.$el, height ? height - getHeight(this.$el) : 0) * this.parallax
                         : false
                 };
@@ -110,7 +117,7 @@ export default {
 
             },
 
-            events: ['scroll', 'load', 'resize']
+            events: ['scroll', 'resize']
 
         }
 

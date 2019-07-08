@@ -5,7 +5,8 @@ export function bind(fn, context) {
     };
 }
 
-const {hasOwnProperty} = Object.prototype;
+const objPrototype = Object.prototype;
+const {hasOwnProperty} = objPrototype;
 
 export function hasOwn(obj, key) {
     return hasOwnProperty.call(obj, key);
@@ -52,12 +53,27 @@ export function endsWith(str, search) {
     return endsWithFn.call(str, search);
 }
 
-const includesFn = function (search) { return ~this.indexOf(search); };
+const arrPrototype = Array.prototype;
+
+const includesFn = function (search, i) { return ~this.indexOf(search, i); };
 const includesStr = strPrototype.includes || includesFn;
-const includesArray = Array.prototype.includes || includesFn;
+const includesArray = arrPrototype.includes || includesFn;
 
 export function includes(obj, search) {
     return obj && (isString(obj) ? includesStr : includesArray).call(obj, search);
+}
+
+const findIndexFn = arrPrototype.findIndex || function (predicate) {
+    for (let i = 0; i < this.length; i++) {
+        if (predicate.call(arguments[1], this[i], i, this)) {
+            return i;
+        }
+    }
+    return -1;
+};
+
+export function findIndex(array, predicate) {
+    return findIndexFn.call(array, predicate);
 }
 
 export const {isArray} = Array;
@@ -71,7 +87,7 @@ export function isObject(obj) {
 }
 
 export function isPlainObject(obj) {
-    return isObject(obj) && Object.getPrototypeOf(obj) === Object.prototype;
+    return isObject(obj) && Object.getPrototypeOf(obj) === objPrototype;
 }
 
 export function isWindow(obj) {
@@ -86,12 +102,13 @@ export function isJQuery(obj) {
     return isObject(obj) && !!obj.jquery;
 }
 
-export function isNode(element) {
-    return element instanceof Node || isObject(element) && element.nodeType === 1;
+export function isNode(obj) {
+    return obj instanceof Node || isObject(obj) && obj.nodeType >= 1;
 }
 
-export function isNodeCollection(element) {
-    return element instanceof NodeList || element instanceof HTMLCollection;
+const {toString} = objPrototype;
+export function isNodeCollection(obj) {
+    return toString.call(obj).match(/^\[object (NodeList|HTMLCollection)\]$/);
 }
 
 export function isBoolean(value) {
@@ -108,6 +125,15 @@ export function isNumber(value) {
 
 export function isNumeric(value) {
     return isNumber(value) || isString(value) && !isNaN(value - parseFloat(value));
+}
+
+export function isEmpty(obj) {
+    return !(isArray(obj)
+        ? obj.length
+        : isObject(obj)
+            ? Object.keys(obj).length
+            : false
+    );
 }
 
 export function isUndefined(value) {
@@ -143,12 +169,11 @@ export function toNode(element) {
                 : null;
 }
 
-const arrayProto = Array.prototype;
 export function toNodes(element) {
     return isNode(element)
         ? [element]
         : isNodeCollection(element)
-            ? arrayProto.slice.call(element)
+            ? arrPrototype.slice.call(element)
             : isArray(element)
                 ? element.map(toNode).filter(Boolean)
                 : isJQuery(element)
@@ -174,6 +199,14 @@ export function toMs(time) {
             : toFloat(time) * 1000;
 }
 
+export function isEqual(value, other) {
+    return value === other
+        || isObject(value)
+        && isObject(other)
+        && Object.keys(value).length === Object.keys(other).length
+        && each(value, (val, key) => val === other[key]);
+}
+
 export function swap(value, a, b) {
     return value.replace(new RegExp(`${a}|${b}`, 'mg'), match => {
         return match === a ? b : a;
@@ -197,35 +230,49 @@ export const assign = Object.assign || function (target, ...args) {
 
 export function each(obj, cb) {
     for (const key in obj) {
-        cb.call(obj[key], obj[key], key);
+        if (false === cb(obj[key], key)) {
+            return false;
+        }
     }
+    return true;
 }
 
-export function sortBy(collection, prop) {
-    return collection.sort((a, b) =>
-        a[prop] > b[prop]
+export function sortBy(array, prop) {
+    return array.sort(({[prop]: propA = 0}, {[prop]: propB = 0}) =>
+        propA > propB
             ? 1
-            : b[prop] > a[prop]
+            : propB > propA
                 ? -1
                 : 0
     );
 }
 
+export function uniqueBy(array, prop) {
+    const seen = new Set();
+    return array.filter(({[prop]: check}) => seen.has(check)
+        ? false
+        : seen.add(check) || true // IE 11 does not return the Set object
+    );
+}
+
 export function clamp(number, min = 0, max = 1) {
-    return Math.min(Math.max(number, min), max);
+    return Math.min(Math.max(toNumber(number) || 0, min), max);
 }
 
 export function noop() {}
 
 export function intersectRect(r1, r2) {
-    return r1.left <= r2.right &&
-        r2.left <= r1.right &&
-        r1.top <= r2.bottom &&
-        r2.top <= r1.bottom;
+    return r1.left < r2.right &&
+        r1.right > r2.left &&
+        r1.top < r2.bottom &&
+        r1.bottom > r2.top;
 }
 
 export function pointInRect(point, rect) {
-    return intersectRect({top: point.y, bottom: point.y, left: point.x, right: point.x}, rect);
+    return point.x <= rect.right &&
+        point.x >= rect.left &&
+        point.y <= rect.bottom &&
+        point.y >= rect.top;
 }
 
 export const Dimensions = {
@@ -235,7 +282,7 @@ export const Dimensions = {
         const aProp = prop === 'width' ? 'height' : 'width';
 
         return {
-            [aProp]: Math.round(value * dimensions[aProp] / dimensions[prop]),
+            [aProp]: dimensions[prop] ? Math.round(value * dimensions[aProp] / dimensions[prop]) : dimensions[aProp],
             [prop]: value
         };
     },

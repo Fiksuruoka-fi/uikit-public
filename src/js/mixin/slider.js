@@ -5,8 +5,6 @@ import {$, assign, clamp, fastdom, getIndex, hasClass, isNumber, isRtl, Promise,
 
 export default {
 
-    attrs: true,
-
     mixins: [SliderAutoplay, SliderDrag, SliderNav],
 
     props: {
@@ -48,7 +46,7 @@ export default {
             return this.length - 1;
         },
 
-        slidesSelector({selList}) {
+        selSlides({selList}) {
             return `${selList} > *`;
         },
 

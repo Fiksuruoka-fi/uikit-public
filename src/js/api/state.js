@@ -1,4 +1,4 @@
-import {assign, attr, bind, camelize, data as getData, getCssVar, hasAttr, hasOwn, hyphenate, isArray, isFunction, isPlainObject, isString, isUndefined, mergeOptions, on, parseOptions, startsWith, toBoolean, toFloat, toList, toNumber} from 'uikit-util';
+import {assign, bind, camelize, data as getData, hasOwn, hyphenate, isArray, isBoolean, isEmpty, isEqual, isFunction, isPlainObject, isString, isUndefined, mergeOptions, on, parseOptions, startsWith, toBoolean, toList, toNumber} from 'uikit-util';
 
 export default function (UIkit) {
 
@@ -51,7 +51,7 @@ export default function (UIkit) {
 
         const {computed} = this.$options;
 
-        this._resetComputeds();
+        this._computeds = {};
 
         if (computed) {
             for (const key in computed) {
@@ -60,15 +60,26 @@ export default function (UIkit) {
         }
     };
 
-    UIkit.prototype._resetComputeds = function () {
-        this._computeds = {};
+    UIkit.prototype._callWatches = function () {
+
+        const {$options: {computed}, _computeds} = this;
+
+        for (const key in _computeds) {
+
+            const value = _computeds[key];
+            delete _computeds[key];
+
+            if (computed[key].watch && !isEqual(value, this[key])) {
+                computed[key].watch.call(this, this[key], value);
+            }
+
+        }
+
     };
 
     UIkit.prototype._initProps = function (props) {
 
         let key;
-
-        this._resetComputeds();
 
         props = props || getProps(this.$options, this.$name);
 
@@ -114,11 +125,11 @@ export default function (UIkit) {
     UIkit.prototype._initObserver = function () {
 
         let {attrs, props, el} = this.$options;
-        if (this._observer || !props || !attrs) {
+        if (this._observer || !props || attrs === false) {
             return;
         }
 
-        attrs = isArray(attrs) ? attrs : Object.keys(props).map(key => hyphenate(key));
+        attrs = isArray(attrs) ? attrs : Object.keys(props);
 
         this._observer = new MutationObserver(() => {
 
@@ -129,7 +140,12 @@ export default function (UIkit) {
 
         });
 
-        this._observer.observe(el, {attributes: true, attributeFilter: attrs.concat([this.$name, `data-${this.$name}`])});
+        const filter = attrs.map(key => hyphenate(key)).concat(this.$name);
+
+        this._observer.observe(el, {
+            attributes: true,
+            attributeFilter: filter.concat(filter.map(key => `data-${key}`))
+        });
     };
 
     function getProps(opts, name) {
@@ -143,9 +159,13 @@ export default function (UIkit) {
 
         for (const key in props) {
             const prop = hyphenate(key);
-            if (hasAttr(el, prop)) {
+            let value = getData(el, prop);
 
-                const value = coerce(props[key], attr(el, prop));
+            if (!isUndefined(value)) {
+
+                value = props[key] === Boolean && value === ''
+                    ? true
+                    : coerce(props[key], value);
 
                 if (prop === 'target' && (!value || startsWith(value, '_'))) {
                     continue;
@@ -177,14 +197,21 @@ export default function (UIkit) {
                 const {_computeds, $props, $el} = component;
 
                 if (!hasOwn(_computeds, key)) {
-                    _computeds[key] = cb.call(component, $props, $el);
+                    _computeds[key] = (cb.get || cb).call(component, $props, $el);
                 }
 
                 return _computeds[key];
             },
 
             set(value) {
-                component._computeds[key] = value;
+
+                const {_computeds} = component;
+
+                _computeds[key] = cb.set ? cb.set.call(component, value) : value;
+
+                if (isUndefined(_computeds[key])) {
+                    delete _computeds[key];
+                }
             }
 
         });
@@ -196,7 +223,7 @@ export default function (UIkit) {
             event = ({name: key, handler: event});
         }
 
-        let {name, el, handler, capture, delegate, filter, self} = event;
+        let {name, el, handler, capture, passive, delegate, filter, self} = event;
         el = isFunction(el)
             ? el.call(component)
             : el || component.$el;
@@ -226,7 +253,9 @@ export default function (UIkit) {
                         ? delegate
                         : delegate.call(component),
                 handler,
-                capture
+                isBoolean(passive)
+                    ? {passive, capture}
+                    : capture
             )
         );
 
@@ -256,30 +285,14 @@ export default function (UIkit) {
             return toNumber(value);
         } else if (type === 'list') {
             return toList(value);
-        } else if (type === 'media') {
-            return toMedia(value);
         }
 
         return type ? type(value) : value;
     }
 
-    function toMedia(value) {
-
-        if (isString(value)) {
-            if (value[0] === '@') {
-                const name = `media-${value.substr(1)}`;
-                value = toFloat(getCssVar(name));
-            } else if (isNaN(value)) {
-                return value;
-            }
-        }
-
-        return value && !isNaN(value) ? `(min-width: ${value}px)` : false;
-    }
-
     function normalizeData({data, el}, {args, props = {}}) {
         data = isArray(data)
-            ? args && args.length
+            ? !isEmpty(args)
                 ? data.slice(0, args.length).reduce((data, value, index) => {
                     if (isPlainObject(value)) {
                         assign(data, value);

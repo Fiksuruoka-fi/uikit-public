@@ -1,7 +1,7 @@
 import {css} from './style';
 import {attr} from './attr';
 import {isVisible} from './filter';
-import {clamp, each, endsWith, includes, intersectRect, isDocument, isUndefined, isWindow, toFloat, toNode, ucfirst} from './lang';
+import {clamp, each, endsWith, includes, intersectRect, isDocument, isNumeric, isUndefined, isWindow, pointInRect, toFloat, toNode, ucfirst} from './lang';
 
 const dirs = {
     width: ['x', 'left', 'right'],
@@ -35,58 +35,67 @@ export function positionAt(element, target, elAttach, targetAttach, elOffset, ta
     position.left += elOffset['x'];
     position.top += elOffset['y'];
 
-    boundary = getDimensions(boundary || window(element));
-
     if (flip) {
+
+        const boundaries = [getDimensions(getWindow(element))];
+
+        if (boundary) {
+            boundaries.unshift(getDimensions(boundary));
+        }
+
         each(dirs, ([dir, align, alignFlip], prop) => {
 
             if (!(flip === true || includes(flip, dir))) {
                 return;
             }
 
-            const elemOffset = elAttach[dir] === align
-                ? -dim[prop]
-                : elAttach[dir] === alignFlip
-                    ? dim[prop]
-                    : 0;
+            boundaries.some(boundary => {
 
-            const targetOffset = targetAttach[dir] === align
-                ? targetDim[prop]
-                : targetAttach[dir] === alignFlip
-                    ? -targetDim[prop]
-                    : 0;
+                const elemOffset = elAttach[dir] === align
+                    ? -dim[prop]
+                    : elAttach[dir] === alignFlip
+                        ? dim[prop]
+                        : 0;
 
-            if (position[align] < boundary[align] || position[align] + dim[prop] > boundary[alignFlip]) {
+                const targetOffset = targetAttach[dir] === align
+                    ? targetDim[prop]
+                    : targetAttach[dir] === alignFlip
+                        ? -targetDim[prop]
+                        : 0;
 
-                const centerOffset = dim[prop] / 2;
-                const centerTargetOffset = targetAttach[dir] === 'center' ? -targetDim[prop] / 2 : 0;
+                if (position[align] < boundary[align] || position[align] + dim[prop] > boundary[alignFlip]) {
 
-                elAttach[dir] === 'center' && (
-                    apply(centerOffset, centerTargetOffset)
-                    || apply(-centerOffset, -centerTargetOffset)
-                ) || apply(elemOffset, targetOffset);
+                    const centerOffset = dim[prop] / 2;
+                    const centerTargetOffset = targetAttach[dir] === 'center' ? -targetDim[prop] / 2 : 0;
 
-            }
+                    return elAttach[dir] === 'center' && (
+                        apply(centerOffset, centerTargetOffset)
+                        || apply(-centerOffset, -centerTargetOffset)
+                    ) || apply(elemOffset, targetOffset);
 
-            function apply(elemOffset, targetOffset) {
-
-                const newVal = position[align] + elemOffset + targetOffset - elOffset[dir] * 2;
-
-                if (newVal >= boundary[align] && newVal + dim[prop] <= boundary[alignFlip]) {
-                    position[align] = newVal;
-
-                    ['element', 'target'].forEach((el) => {
-                        flipped[el][dir] = !elemOffset
-                            ? flipped[el][dir]
-                            : flipped[el][dir] === dirs[prop][1]
-                                ? dirs[prop][2]
-                                : dirs[prop][1];
-                    });
-
-                    return true;
                 }
 
-            }
+                function apply(elemOffset, targetOffset) {
+
+                    const newVal = position[align] + elemOffset + targetOffset - elOffset[dir] * 2;
+
+                    if (newVal >= boundary[align] && newVal + dim[prop] <= boundary[alignFlip]) {
+                        position[align] = newVal;
+
+                        ['element', 'target'].forEach(el => {
+                            flipped[el][dir] = !elemOffset
+                                ? flipped[el][dir]
+                                : flipped[el][dir] === dirs[prop][1]
+                                    ? dirs[prop][2]
+                                    : dirs[prop][1];
+                        });
+
+                        return true;
+                    }
+
+                }
+
+            });
 
         });
     }
@@ -126,7 +135,7 @@ function getDimensions(element) {
 
     element = toNode(element);
 
-    const {pageYOffset: top, pageXOffset: left} = window(element);
+    const {pageYOffset: top, pageXOffset: left} = getWindow(element);
 
     if (isWindow(element)) {
 
@@ -139,13 +148,14 @@ function getDimensions(element) {
             height,
             width,
             bottom: top + height,
-            right: left + width,
+            right: left + width
         };
     }
 
     let style, hidden;
 
-    if (!isVisible(element)) {
+    if (!isVisible(element) && css(element, 'display') === 'none') {
+
         style = attr(element, 'style');
         hidden = attr(element, 'hidden');
 
@@ -167,35 +177,24 @@ function getDimensions(element) {
         top: rect.top + top,
         left: rect.left + left,
         bottom: rect.bottom + top,
-        right: rect.right + left,
+        right: rect.right + left
     };
 }
 
 export function position(element) {
     element = toNode(element);
 
-    const parent = offsetParent(element);
-    const parentOffset = parent === docEl(element) ? {top: 0, left: 0} : offset(parent);
+    const parent = element.offsetParent || getDocEl(element);
+    const parentOffset = offset(parent);
     const {top, left} = ['top', 'left'].reduce((props, prop) => {
         const propName = ucfirst(prop);
         props[prop] -= parentOffset[prop]
-            + (toFloat(css(element, `margin${propName}`)) || 0)
-            + (toFloat(css(parent, `border${propName}Width`)) || 0);
+            + toFloat(css(element, `margin${propName}`))
+            + toFloat(css(parent, `border${propName}Width`));
         return props;
     }, offset(element));
 
     return {top, left};
-}
-
-function offsetParent(element) {
-
-    let parent = toNode(element).offsetParent;
-
-    while (parent && css(parent, 'position') === 'static') {
-        parent = parent.offsetParent;
-    }
-
-    return parent || docEl(element);
 }
 
 export const height = dimension('height');
@@ -235,8 +234,8 @@ function dimension(prop) {
     };
 }
 
-function boxModelAdjust(prop, element) {
-    return css(element, 'boxSizing') === 'border-box'
+export function boxModelAdjust(prop, element, sizing = 'border-box') {
+    return css(element, 'boxSizing') === sizing
         ? dirs[prop].slice(1).map(ucfirst).reduce((value, prop) =>
             value
             + toFloat(css(element, `padding${prop}`))
@@ -301,44 +300,24 @@ export function flipPosition(pos) {
     }
 }
 
-export function isInView(element, topOffset = 0, leftOffset = 0, relativeToViewport) {
+export function isInView(element, topOffset = 0, leftOffset = 0) {
 
     if (!isVisible(element)) {
         return false;
     }
 
     element = toNode(element);
-    const win = window(element);
 
-    if (relativeToViewport) {
+    const win = getWindow(element);
+    const client = element.getBoundingClientRect();
+    const bounding = {
+        top: -topOffset,
+        left: -leftOffset,
+        bottom: topOffset + height(win),
+        right: leftOffset + width(win)
+    };
 
-        return intersectRect(element.getBoundingClientRect(), {
-            top: -topOffset,
-            left: -leftOffset,
-            bottom: topOffset + height(win),
-            right: leftOffset + width(win)
-        });
-
-    } else {
-
-        const [elTop, elLeft] = offsetPosition(element);
-        const {pageYOffset: top, pageXOffset: left} = win;
-
-        return intersectRect(
-            {
-                top: elTop,
-                left: elLeft,
-                bottom: elTop + element.offsetHeight,
-                right: elTop + element.offsetWidth
-            },
-            {
-                top: top - topOffset,
-                left: left - leftOffset,
-                bottom: top + topOffset + height(win),
-                right: left + leftOffset + width(win)
-            }
-        );
-    }
+    return intersectRect(client, bounding) || pointInRect({x: client.left, y: client.top}, bounding);
 
 }
 
@@ -350,8 +329,8 @@ export function scrolledOver(element, heightOffset = 0) {
 
     element = toNode(element);
 
-    const win = window(element);
-    const doc = document(element);
+    const win = getWindow(element);
+    const doc = getDocument(element);
     const elHeight = element.offsetHeight + heightOffset;
     const [top] = offsetPosition(element);
     const vp = height(win);
@@ -361,7 +340,18 @@ export function scrolledOver(element, heightOffset = 0) {
     return clamp(((vh + win.pageYOffset - top) / ((vh + (elHeight - (diff < vp ? diff : 0))) / 100)) / 100);
 }
 
-function offsetPosition(element) {
+export function scrollTop(element, top) {
+    element = toNode(element);
+
+    if (isWindow(element) || isDocument(element)) {
+        const {scrollTo, pageXOffset} = getWindow(element);
+        scrollTo(pageXOffset, top);
+    } else {
+        element.scrollTop = top;
+    }
+}
+
+export function offsetPosition(element) {
     const offset = [0, 0];
 
     do {
@@ -370,7 +360,7 @@ function offsetPosition(element) {
         offset[1] += element.offsetLeft;
 
         if (css(element, 'position') === 'fixed') {
-            const win = window(element);
+            const win = getWindow(element);
             offset[0] += win.pageYOffset;
             offset[1] += win.pageXOffset;
             return offset;
@@ -381,14 +371,30 @@ function offsetPosition(element) {
     return offset;
 }
 
-function window(element) {
-    return isWindow(element) ? element : document(element).defaultView;
+export function toPx(value, property = 'width', element = window) {
+    return isNumeric(value)
+        ? +value
+        : endsWith(value, 'vh')
+            ? percent(height(getWindow(element)), value)
+            : endsWith(value, 'vw')
+                ? percent(width(getWindow(element)), value)
+                : endsWith(value, '%')
+                    ? percent(getDimensions(element)[property], value)
+                    : toFloat(value);
 }
 
-function document(element) {
+function percent(base, value) {
+    return base * toFloat(value) / 100;
+}
+
+function getWindow(element) {
+    return isWindow(element) ? element : getDocument(element).defaultView;
+}
+
+function getDocument(element) {
     return toNode(element).ownerDocument;
 }
 
-function docEl(element) {
-    return document(element).documentElement;
+function getDocEl(element) {
+    return getDocument(element).documentElement;
 }
