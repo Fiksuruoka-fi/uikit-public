@@ -14,7 +14,6 @@
 /node_modules
 /tests/js/test*
 /tests/css/*
-custom
 themes.json
 .DS_Store
 /.idea
