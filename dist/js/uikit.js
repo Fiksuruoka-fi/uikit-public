@@ -3257,11 +3257,17 @@
 
             });
 
+<<<<<<< HEAD
             var filter = attrs.map(function (key) { return hyphenate(key); }).concat(this.$name);
 
             this._observer.observe(el, {
                 attributes: true,
                 attributeFilter: filter.concat(filter.map(function (key) { return ("data-" + key); }))
+=======
+            this._observer.observe(el, {
+                attributes: true,
+                attributeFilter: attrs.map(function (key) { return hyphenate(key); }).concat([this.$name, ("data-" + (this.$name))])
+>>>>>>> develop
             });
         };
 
@@ -5067,8 +5073,14 @@
 
                     toggleClass(this.$el, this.clsStack, stacks);
 
+<<<<<<< HEAD
                     css(this.$el, 'paddingBottom', this.parallax);
                     height !== false && css(this.$el, 'height', height);
+=======
+                    css(this.$el, 'paddingBottom', this.parallax && rows.some(function (row) { return row.length > 1; }) ? this.parallax : '');
+
+                    height$$1 && css(this.$el, 'height', height$$1);
+>>>>>>> develop
 
                 },
 
@@ -8552,11 +8564,19 @@
                 addClass(this.target, targetClass);
                 children.forEach(function (el, i) { return propsFrom[i] && css(el, propsFrom[i]); });
                 css(this.target, 'height', oldHeight);
+<<<<<<< HEAD
                 scrollTop(window, oldScrollY);
+=======
+                window.scroll(window.pageXOffset, oldScrollY);
+>>>>>>> develop
 
                 return Promise.all(children.map(function (el, i) { return propsFrom[i] && propsTo[i]
                         ? Transition.start(el, propsTo[i], this$1.animation, 'ease')
+<<<<<<< HEAD
                         : Promise.resolve(); }
+=======
+                        : Promise$1.resolve(); }
+>>>>>>> develop
                 ).concat(Transition.start(this.target, {height: newHeight}, this.animation, 'ease'))).then(function () {
                     children.forEach(function (el, i) { return css(el, {display: propsTo[i].opacity === 0 ? 'none' : '', zIndex: ''}); });
                     reset(this$1.target);
