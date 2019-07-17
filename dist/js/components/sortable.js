@@ -1,10 +1,10 @@
-/*! UIkit 3.0.0-rc.5 | http://www.getuikit.com | (c) 2014 - 2017 YOOtheme | MIT License */
+/*! UIkit 3.1.6 | http://www.getuikit.com | (c) 2014 - 2018 YOOtheme | MIT License */
 
 (function (global, factory) {
-    typeof exports === 'object' && typeof module !== 'undefined' ? factory(require('uikit-util')) :
+    typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('uikit-util')) :
     typeof define === 'function' && define.amd ? define('uikitsortable', ['uikit-util'], factory) :
-    (factory(global.UIkit.util));
-}(this, (function (uikitUtil) { 'use strict';
+    (global = global || self, global.UIkitSortable = factory(global.UIkit.util));
+}(this, function (uikitUtil) { 'use strict';
 
     var targetClass = 'uk-animation-target';
 
@@ -87,7 +87,7 @@
                 uikitUtil.addClass(this.target, targetClass);
                 children.forEach(function (el, i) { return propsFrom[i] && uikitUtil.css(el, propsFrom[i]); });
                 uikitUtil.css(this.target, 'height', oldHeight);
-                window.scroll(window.pageXOffset, oldScrollY);
+                uikitUtil.scrollTop(window, oldScrollY);
 
                 return uikitUtil.Promise.all(children.map(function (el, i) { return propsFrom[i] && propsTo[i]
                         ? uikitUtil.Transition.start(el, propsTo[i], this$1.animation, 'ease')
@@ -96,6 +96,7 @@
                     children.forEach(function (el, i) { return uikitUtil.css(el, {display: propsTo[i].opacity === 0 ? 'none' : '', zIndex: ''}); });
                     reset(this$1.target);
                     this$1.$update(this$1.target);
+                    uikitUtil.fastdom.flush(); // needed for IE11
                 }, uikitUtil.noop);
 
             }
@@ -146,23 +147,22 @@
     var style;
 
     function addStyle() {
-        if (!style) {
-            style = uikitUtil.append(document.head, '<style>').sheet;
-            style.insertRule(
-                ("." + targetClass + " > * {\n                    margin-top: 0 !important;\n                    transform: none !important;\n                }")
-            );
+        if (style) {
+            return;
         }
+        style = uikitUtil.append(document.head, '<style>').sheet;
+        style.insertRule(
+            ("." + targetClass + " > * {\n            margin-top: 0 !important;\n            transform: none !important;\n        }"), 0
+        );
     }
 
     var Class = {
 
         connected: function() {
-            uikitUtil.addClass(this.$el, this.$name);
+            !uikitUtil.hasClass(this.$el, this.$name) && uikitUtil.addClass(this.$el, this.$name);
         }
 
     };
-
-    var obj;
 
     var Component = {
 
@@ -196,14 +196,14 @@
             handle: false
         },
 
-        init: function() {
+        created: function() {
             var this$1 = this;
 
             ['init', 'start', 'move', 'end'].forEach(function (key) {
                 var fn = this$1[key];
                 this$1[key] = function (e) {
                     this$1.scrollY = window.pageYOffset;
-                    var ref = uikitUtil.getPos(e);
+                    var ref = uikitUtil.getEventPos(e, 'page');
                     var x = ref.x;
                     var y = ref.y;
                     this$1.pos = {x: x, y: y};
@@ -213,15 +213,23 @@
             });
         },
 
-        events: ( obj = {}, obj[uikitUtil.pointerDown] = 'init', obj ),
+        events: {
+
+            name: uikitUtil.pointerDown,
+            passive: false,
+            handler: 'init'
+
+        },
 
         update: {
 
             write: function() {
 
                 if (this.clsEmpty) {
-                    uikitUtil.toggleClass(this.$el, this.clsEmpty, !this.$el.children.length);
+                    uikitUtil.toggleClass(this.$el, this.clsEmpty, uikitUtil.isEmpty(this.$el.children));
                 }
+
+                uikitUtil.css(this.handle ? uikitUtil.$$(this.handle, this.$el) : this.$el.children, {touchAction: 'none', userSelect: 'none'});
 
                 if (!this.drag) {
                     return;
@@ -231,7 +239,8 @@
 
                 var ref = uikitUtil.offset(this.drag);
                 var top = ref.top;
-                var bottom = top + this.drag.offsetHeight;
+                var offsetHeight = ref.height;
+                var bottom = top + offsetHeight;
                 var scroll;
 
                 if (top > 0 && top < this.scrollY) {
@@ -240,7 +249,7 @@
                     scroll = this.scrollY + 5;
                 }
 
-                scroll && setTimeout(function () { return window.scroll(window.pageXOffset, scroll); }, 5);
+                scroll && setTimeout(function () { return uikitUtil.scrollTop(window, scroll); }, 5);
             }
 
         },
@@ -256,11 +265,11 @@
                 var placeholder = ref[0];
 
                 if (!placeholder
-                    || uikitUtil.isInput(e.target)
-                    || this.handle && !uikitUtil.within(target, this.handle)
-                    || button > 0
-                    || uikitUtil.within(target, ("." + (this.clsNoDrag)))
                     || defaultPrevented
+                    || button > 0
+                    || uikitUtil.isInput(target)
+                    || uikitUtil.within(target, ("." + (this.clsNoDrag)))
+                    || this.handle && !uikitUtil.within(target, this.handle)
                 ) {
                     return;
                 }
@@ -322,7 +331,7 @@
 
                 this.$emit();
 
-                var target = e.type === 'mousemove' ? e.target : document.elementFromPoint(this.pos.x - document.body.scrollLeft, this.pos.y - document.body.scrollTop);
+                var target = e.type === 'mousemove' ? e.target : document.elementFromPoint(this.pos.x - window.pageXOffset, this.pos.y - window.pageYOffset);
 
                 var sortable = this.getSortable(target);
                 var previous = this.getSortable(this.placeholder);
@@ -348,15 +357,6 @@
 
             },
 
-            scroll: function() {
-                var scroll = window.pageYOffset;
-                if (scroll !== this.scrollY) {
-                    this.pos.y += scroll - this.scrollY;
-                    this.scrollY = scroll;
-                    this.$emit();
-                }
-            },
-
             end: function(e) {
 
                 uikitUtil.off(document, uikitUtil.pointerMove, this.move);
@@ -364,15 +364,12 @@
                 uikitUtil.off(window, 'scroll', this.scroll);
 
                 if (!this.drag) {
-
-                    if (e.type !== 'mouseup' && uikitUtil.within(e.target, 'a[href]')) {
-                        location.href = uikitUtil.closest(e.target, 'a[href]').href;
+                    if (e.type === 'touchend') {
+                        e.target.click();
                     }
 
                     return;
                 }
-
-                uikitUtil.preventClick();
 
                 var sortable = this.getSortable(this.placeholder);
 
@@ -395,6 +392,15 @@
 
                 uikitUtil.removeClass(document.documentElement, this.clsDragState);
 
+            },
+
+            scroll: function() {
+                var scroll = window.pageYOffset;
+                if (scroll !== this.scrollY) {
+                    this.pos.y += scroll - this.scrollY;
+                    this.scrollY = scroll;
+                    this.$emit();
+                }
             },
 
             insert: function(element, target) {
@@ -433,6 +439,8 @@
                     return;
                 }
 
+                uikitUtil.css(this.handle ? uikitUtil.$$(this.handle, element) : element, {touchAction: '', userSelect: ''});
+
                 if (this.animation) {
                     this.animate(function () { return uikitUtil.remove(element); });
                 } else {
@@ -459,4 +467,6 @@
         window.UIkit.component('sortable', Component);
     }
 
-})));
+    return Component;
+
+}));

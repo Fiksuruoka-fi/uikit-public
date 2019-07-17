@@ -1,28 +1,66 @@
-/*! UIkit 3.0.0-rc.5 | http://www.getuikit.com | (c) 2014 - 2017 YOOtheme | MIT License */
+/*! UIkit 3.1.6 | http://www.getuikit.com | (c) 2014 - 2018 YOOtheme | MIT License */
 
 (function (global, factory) {
-    typeof exports === 'object' && typeof module !== 'undefined' ? factory(require('uikit-util')) :
+    typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('uikit-util')) :
     typeof define === 'function' && define.amd ? define('uikitparallax', ['uikit-util'], factory) :
-    (factory(global.UIkit.util));
-}(this, (function (uikitUtil) { 'use strict';
+    (global = global || self, global.UIkitParallax = factory(global.UIkit.util));
+}(this, function (uikitUtil) { 'use strict';
 
-    var props = ['x', 'y', 'bgx', 'bgy', 'rotate', 'scale', 'color', 'backgroundColor', 'borderColor', 'opacity', 'blur', 'hue', 'grayscale', 'invert', 'saturate', 'sepia', 'fopacity'];
+    var Media = {
+
+        props: {
+            media: Boolean
+        },
+
+        data: {
+            media: false
+        },
+
+        computed: {
+
+            matchMedia: function() {
+                var media = toMedia(this.media);
+                return !media || window.matchMedia(media).matches;
+            }
+
+        }
+
+    };
+
+    function toMedia(value) {
+
+        if (uikitUtil.isString(value)) {
+            if (value[0] === '@') {
+                var name = "breakpoint-" + (value.substr(1));
+                value = uikitUtil.toFloat(uikitUtil.getCssVar(name));
+            } else if (isNaN(value)) {
+                return value;
+            }
+        }
+
+        return value && !isNaN(value) ? ("(min-width: " + value + "px)") : false;
+    }
+
+    function getMaxPathLength(el) {
+        return Math.ceil(Math.max.apply(Math, uikitUtil.$$('[stroke]', el).map(function (stroke) { return stroke.getTotalLength && stroke.getTotalLength() || 0; }
+        ).concat([0])));
+    }
+
+    var props = ['x', 'y', 'bgx', 'bgy', 'rotate', 'scale', 'color', 'backgroundColor', 'borderColor', 'opacity', 'blur', 'hue', 'grayscale', 'invert', 'saturate', 'sepia', 'fopacity', 'stroke'];
 
     var Parallax = {
+
+        mixins: [Media],
 
         props: props.reduce(function (props, prop) {
             props[prop] = 'list';
             return props;
-        }, {
-            media: 'media'
-        }),
+        }, {}),
 
         data: props.reduce(function (data, prop) {
             data[prop] = undefined;
             return data;
-        }, {
-            media: false
-        }),
+        }, {}),
 
         computed: {
 
@@ -54,7 +92,7 @@
                                 : 0) || 0);
                     }
 
-                    var unit = uikitUtil.includes(steps.join(''), '%') ? '%' : 'px';
+                    var unit = getUnit(steps);
 
                     if (isColor) {
 
@@ -63,13 +101,10 @@
                         steps = steps.map(function (step) { return parseColor($el, step); });
                         $el.style.color = color;
 
-                    } else {
+                    } else if (uikitUtil.startsWith(prop, 'bg')) {
 
-                        steps = steps.map(uikitUtil.toFloat);
-
-                    }
-
-                    if (prop.match(/^bg/)) {
+                        var attr = prop === 'bgy' ? 'height' : 'width';
+                        steps = steps.map(function (step) { return uikitUtil.toPx(step, attr, this$1.$el); });
 
                         uikitUtil.css($el, ("background-position-" + (prop[2])), '');
                         bgPos = uikitUtil.css($el, 'backgroundPosition').split(' ')[prop[2] === 'x' ? 0 : 1]; // IE 11 can't read background-position-[x|y]
@@ -90,6 +125,29 @@
                             pos = bgPos;
 
                         }
+
+                    } else {
+
+                        steps = steps.map(uikitUtil.toFloat);
+
+                    }
+
+                    if (prop === 'stroke') {
+
+                        if (!steps.some(function (step) { return step; })) {
+                            return props;
+                        }
+
+                        var length = getMaxPathLength(this$1.$el);
+                        uikitUtil.css($el, 'strokeDasharray', length);
+
+                        if (unit === '%') {
+                            steps = steps.map(function (step) { return step * length / 100; });
+                        }
+
+                        steps = steps.reverse();
+
+                        prop = 'strokeDashoffset';
                     }
 
                     props[prop] = {steps: steps, unit: unit, pos: pos, bgPos: bgPos, diff: diff};
@@ -116,104 +174,96 @@
             delete this._image;
         },
 
-        update: [
+        update: {
 
-            {
-
-                read: function(data) {
-                    var this$1 = this;
+            read: function(data) {
+                var this$1 = this;
 
 
-                    data.active = !this.media || window.matchMedia(this.media).matches;
+                data.active = this.matchMedia;
 
-                    if (data.image) {
-                        data.image.dimEl = {
-                            width: this.$el.offsetWidth,
-                            height: this.$el.offsetHeight
-                        };
-                    }
+                if (!data.active) {
+                    return;
+                }
 
-                    if ('image' in data || !this.covers || !this.bgProps.length) {
-                        return;
-                    }
-
+                if (!data.image && this.covers && this.bgProps.length) {
                     var src = uikitUtil.css(this.$el, 'backgroundImage').replace(/^none|url\(["']?(.+?)["']?\)$/, '$1');
 
-                    if (!src) {
-                        return;
-                    }
+                    if (src) {
+                        var img = new Image();
+                        img.src = src;
+                        data.image = img;
 
-                    data.image = false;
-
-                    uikitUtil.getImage(src).then(function (img) {
-                        data.image = {
-                            width: img.naturalWidth,
-                            height: img.naturalHeight
-                        };
-
-                        this$1.$emit();
-                    });
-
-                },
-
-                write: function(ref) {
-                    var this$1 = this;
-                    var image = ref.image;
-                    var active = ref.active;
-
-
-                    if (!image) {
-                        return;
-                    }
-
-                    if (!active) {
-                        uikitUtil.css(this.$el, {backgroundSize: '', backgroundRepeat: ''});
-                        return;
-                    }
-
-                    var dimEl = image.dimEl;
-
-                    var dim = uikitUtil.Dimensions.cover(image, dimEl);
-
-                    this.bgProps.forEach(function (prop) {
-
-                        var ref = this$1.props[prop];
-                        var diff = ref.diff;
-                        var bgPos = ref.bgPos;
-                        var steps = ref.steps;
-                        var attr = prop === 'bgy' ? 'height' : 'width';
-                        var span = dim[attr] - dimEl[attr];
-
-                        if (!bgPos.match(/%$|0px/)) {
-                            return;
+                        if (!img.naturalWidth) {
+                            img.onload = function () { return this$1.$emit(); };
                         }
+                    }
 
-                        if (span < diff) {
-                            dimEl[attr] = dim[attr] + diff - span;
-                        } else if (span > diff) {
+                }
 
-                            var bgPosFloat = parseFloat(bgPos);
+                var image = data.image;
 
-                            if (bgPosFloat) {
-                                this$1.props[prop].steps = steps.map(function (step) { return step - (span - diff) / (100 / bgPosFloat); });
-                            }
+                if (!image || !image.naturalWidth) {
+                    return;
+                }
+
+                var dimEl = {
+                    width: this.$el.offsetWidth,
+                    height: this.$el.offsetHeight
+                };
+                var dimImage = {
+                    width: image.naturalWidth,
+                    height: image.naturalHeight
+                };
+
+                var dim = uikitUtil.Dimensions.cover(dimImage, dimEl);
+
+                this.bgProps.forEach(function (prop) {
+
+                    var ref = this$1.props[prop];
+                    var diff = ref.diff;
+                    var bgPos = ref.bgPos;
+                    var steps = ref.steps;
+                    var attr = prop === 'bgy' ? 'height' : 'width';
+                    var span = dim[attr] - dimEl[attr];
+
+                    if (span < diff) {
+                        dimEl[attr] = dim[attr] + diff - span;
+                    } else if (span > diff) {
+
+                        var posPercentage = dimEl[attr] / uikitUtil.toPx(bgPos, attr, this$1.$el);
+
+                        if (posPercentage) {
+                            this$1.props[prop].steps = steps.map(function (step) { return step - (span - diff) / posPercentage; });
                         }
+                    }
 
-                        dim = uikitUtil.Dimensions.cover(image, dimEl);
-                    });
+                    dim = uikitUtil.Dimensions.cover(dimImage, dimEl);
+                });
 
-                    uikitUtil.css(this.$el, {
-                        backgroundSize: ((dim.width) + "px " + (dim.height) + "px"),
-                        backgroundRepeat: 'no-repeat'
-                    });
+                data.dim = dim;
+            },
 
-                },
+            write: function(ref) {
+                var dim = ref.dim;
+                var active = ref.active;
 
-                events: ['load', 'resize']
 
-            }
+                if (!active) {
+                    uikitUtil.css(this.$el, {backgroundSize: '', backgroundRepeat: ''});
+                    return;
+                }
 
-        ],
+                dim && uikitUtil.css(this.$el, {
+                    backgroundSize: ((dim.width) + "px " + (dim.height) + "px"),
+                    backgroundRepeat: 'no-repeat'
+                });
+
+            },
+
+            events: ['resize']
+
+        },
 
         methods: {
 
@@ -227,8 +277,6 @@
 
                 var ref = this;
                 var props = ref.props;
-                var translated = false;
-
                 return Object.keys(props).reduce(function (css, prop) {
 
                     var ref = props[prop];
@@ -241,25 +289,14 @@
 
                         // transforms
                         case 'x':
-                        case 'y':
-
-                            if (translated) {
-                                break;
-                            }
-
-                            var ref$1 = ['x', 'y'].map(function (dir) { return prop === dir
-                                ? value + unit
-                                : props[dir]
-                                    ? getValue(props[dir].steps, percent) + props[dir].unit
-                                    : 0; }
-                            );
-                    var x = ref$1[0];
-                    var y = ref$1[1];
-
-                            translated = css.transform += " translate3d(" + x + ", " + y + ", 0)";
+                        case 'y': {
+                            unit = unit || 'px';
+                            css.transform += " translate" + (uikitUtil.ucfirst(prop)) + "(" + (uikitUtil.toFloat(value).toFixed(unit === 'px' ? 0 : 2)) + unit + ")";
                             break;
+                        }
                         case 'rotate':
-                            css.transform += " rotate(" + value + "deg)";
+                            unit = unit || 'deg';
+                            css.transform += " rotate(" + (value + unit) + ")";
                             break;
                         case 'scale':
                             css.transform += " scale(" + value + ")";
@@ -268,42 +305,45 @@
                         // bg image
                         case 'bgy':
                         case 'bgx':
-                            css[("background-position-" + (prop[2]))] = "calc(" + pos + " + " + (value + unit) + ")";
+                            css[("background-position-" + (prop[2]))] = "calc(" + pos + " + " + value + "px)";
                             break;
 
                         // color
                         case 'color':
                         case 'backgroundColor':
-                        case 'borderColor':
+                        case 'borderColor': {
 
-                            var ref$2 = getStep(steps, percent);
-                    var start = ref$2[0];
-                    var end = ref$2[1];
-                    var p = ref$2[2];
+                            var ref$1 = getStep(steps, percent);
+                            var start = ref$1[0];
+                            var end = ref$1[1];
+                            var p = ref$1[2];
 
                             css[prop] = "rgba(" + (start.map(function (value, i) {
                                     value = value + p * (end[i] - value);
                                     return i === 3 ? uikitUtil.toFloat(value) : parseInt(value, 10);
                                 }).join(',')) + ")";
                             break;
-
+                        }
                         // CSS Filter
                         case 'blur':
-                            css.filter += " blur(" + value + "px)";
+                            unit = unit || 'px';
+                            css.filter += " blur(" + (value + unit) + ")";
                             break;
                         case 'hue':
-                            css.filter += " hue-rotate(" + value + "deg)";
+                            unit = unit || 'deg';
+                            css.filter += " hue-rotate(" + (value + unit) + ")";
                             break;
                         case 'fopacity':
-                            css.filter += " opacity(" + value + "%)";
+                            unit = unit || '%';
+                            css.filter += " opacity(" + (value + unit) + ")";
                             break;
                         case 'grayscale':
                         case 'invert':
                         case 'saturate':
                         case 'sepia':
-                            css.filter += " " + prop + "(" + value + "%)";
+                            unit = unit || '%';
+                            css.filter += " " + prop + "(" + (value + unit) + ")";
                             break;
-
                         default:
                             css[prop] = value;
                     }
@@ -319,7 +359,12 @@
     };
 
     function parseColor(el, color) {
-        return uikitUtil.css(uikitUtil.css(el, 'color', color), 'color').split(/[(),]/g).slice(1, -1).concat(1).slice(0, 4).map(function (n) { return uikitUtil.toFloat(n); });
+        return uikitUtil.css(uikitUtil.css(el, 'color', color), 'color')
+            .split(/[(),]/g)
+            .slice(1, -1)
+            .concat(1)
+            .slice(0, 4)
+            .map(uikitUtil.toFloat);
     }
 
     function getStep(steps, percent) {
@@ -332,15 +377,21 @@
         return step;
     }
 
-    function getValue(steps, percent) {
+    function getValue(steps, percent, digits) {
+        if ( digits === void 0 ) digits = 2;
+
         var ref = getStep(steps, percent);
         var start = ref[0];
         var end = ref[1];
         var p = ref[2];
         return (uikitUtil.isNumber(start)
-                ? start + Math.abs(start - end) * p * (start < end ? 1 : -1)
-                : +end
-        ).toFixed(2);
+            ? start + Math.abs(start - end) * p * (start < end ? 1 : -1)
+            : +end
+        ).toFixed(digits);
+    }
+
+    function getUnit(steps) {
+        return steps.reduce(function (unit, step) { return uikitUtil.isString(step) && step.replace(/-|\d/g, '').trim() || unit; }, '');
     }
 
     function covers(el) {
@@ -358,13 +409,13 @@
         props: {
             target: String,
             viewport: Number,
-            easing: Number,
+            easing: Number
         },
 
         data: {
             target: false,
             viewport: 1,
-            easing: 1,
+            easing: 1
         },
 
         computed: {
@@ -372,55 +423,65 @@
             target: function(ref, $el) {
                 var target = ref.target;
 
-                return target && uikitUtil.query(target, $el) || $el;
+                return getOffsetElement(target && uikitUtil.query(target, $el) || $el);
             }
 
         },
 
-        update: [
+        update: {
 
-            {
-
-                read: function(ref) {
-                    var percent = ref.percent;
-
-                    return {
-                        prev: percent,
-                        percent: ease(uikitUtil.scrolledOver(this.target) / (this.viewport || 1), this.easing)
-                    };
-                },
-
-                write: function(ref, ref$1) {
-                    var prev = ref.prev;
-                    var percent = ref.percent;
-                    var active = ref.active;
-                    var type = ref$1.type;
+            read: function(ref, type) {
+                var percent = ref.percent;
+                var active = ref.active;
 
 
-                    if (type !== 'scroll') {
-                        prev = false;
-                    }
+                if (type !== 'scroll') {
+                    percent = false;
+                }
 
-                    if (!active) {
-                        this.reset();
-                        return;
-                    }
+                if (!active) {
+                    return;
+                }
 
-                    if (prev !== percent) {
-                        uikitUtil.css(this.$el, this.getCss(percent));
-                    }
+                var prev = percent;
+                percent = ease(uikitUtil.scrolledOver(this.target) / (this.viewport || 1), this.easing);
 
-                },
+                return {
+                    percent: percent,
+                    style: prev !== percent ? this.getCss(percent) : false
+                };
+            },
 
-                events: ['scroll', 'load', 'resize']
-            }
+            write: function(ref) {
+                var style = ref.style;
+                var active = ref.active;
 
-        ]
+
+                if (!active) {
+                    this.reset();
+                    return;
+                }
+
+                style && uikitUtil.css(this.$el, style);
+
+            },
+
+            events: ['scroll', 'resize']
+        }
 
     };
 
     function ease(percent, easing) {
         return uikitUtil.clamp(percent * (1 - (easing - easing * percent)));
+    }
+
+    // SVG elements do not inherit from HTMLElement
+    function getOffsetElement(el) {
+        return el
+            ? 'offsetTop' in el
+                ? el
+                : getOffsetElement(el.parentNode)
+            : document.body;
     }
 
     /* global UIkit, 'parallax' */
@@ -429,4 +490,6 @@
         window.UIkit.component('parallax', Component);
     }
 
-})));
+    return Component;
+
+}));

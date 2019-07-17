@@ -1,15 +1,15 @@
-/*! UIkit 3.0.0-rc.5 | http://www.getuikit.com | (c) 2014 - 2017 YOOtheme | MIT License */
+/*! UIkit 3.1.6 | http://www.getuikit.com | (c) 2014 - 2018 YOOtheme | MIT License */
 
 (function (global, factory) {
-    typeof exports === 'object' && typeof module !== 'undefined' ? factory(require('uikit-util')) :
+    typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('uikit-util')) :
     typeof define === 'function' && define.amd ? define('uikitslider', ['uikit-util'], factory) :
-    (factory(global.UIkit.util));
-}(this, (function (uikitUtil) { 'use strict';
+    (global = global || self, global.UIkitSlider = factory(global.UIkit.util));
+}(this, function (uikitUtil) { 'use strict';
 
     var Class = {
 
         connected: function() {
-            uikitUtil.addClass(this.$el, this.$name);
+            !uikitUtil.hasClass(this.$el, this.$name) && uikitUtil.addClass(this.$el, this.$name);
         }
 
     };
@@ -29,11 +29,15 @@
         },
 
         connected: function() {
-            this.startAutoplay();
+            this.autoplay && this.startAutoplay();
         },
 
         disconnected: function() {
             this.stopAutoplay();
+        },
+
+        update: function() {
+            uikitUtil.attr(this.slides, 'tabindex', '-1');
         },
 
         events: [
@@ -43,6 +47,10 @@
                 name: 'visibilitychange',
 
                 el: document,
+
+                filter: function() {
+                    return this.autoplay;
+                },
 
                 handler: function() {
                     if (document.hidden) {
@@ -56,17 +64,10 @@
 
             {
 
-                name: uikitUtil.pointerDown,
-                handler: 'stopAutoplay'
-
-            },
-
-            {
-
                 name: 'mouseenter',
 
                 filter: function() {
-                    return this.autoplay;
+                    return this.autoplay && this.pauseOnHover;
                 },
 
                 handler: function() {
@@ -80,7 +81,7 @@
                 name: 'mouseleave',
 
                 filter: function() {
-                    return this.autoplay;
+                    return this.autoplay && this.pauseOnHover;
                 },
 
                 handler: function() {
@@ -99,19 +100,18 @@
 
                 this.stopAutoplay();
 
-                if (this.autoplay) {
-                    this.interval = setInterval(
-                        function () { return !(this$1.isHovering && this$1.pauseOnHover) && !this$1.stack.length && this$1.show('next'); },
-                        this.autoplayInterval
-                    );
-                }
+                this.interval = setInterval(
+                    function () { return !uikitUtil.within(document.activeElement, this$1.$el)
+                        && !this$1.isHovering
+                        && !this$1.stack.length
+                        && this$1.show('next'); },
+                    this.autoplayInterval
+                );
 
             },
 
             stopAutoplay: function() {
-                if (this.interval) {
-                    clearInterval(this.interval);
-                }
+                this.interval && clearInterval(this.interval);
             }
 
         }
@@ -120,12 +120,16 @@
 
     var SliderDrag = {
 
-        data: {
-            threshold: 10,
-            preventCatch: false
+        props: {
+            draggable: Boolean
         },
 
-        init: function() {
+        data: {
+            draggable: true,
+            threshold: 10
+        },
+
+        created: function() {
             var this$1 = this;
 
 
@@ -134,7 +138,7 @@
                 var fn = this$1[key];
                 this$1[key] = function (e) {
 
-                    var pos = uikitUtil.getPos(e).x * (uikitUtil.isRtl ? -1 : 1);
+                    var pos = uikitUtil.getEventPos(e).x * (uikitUtil.isRtl ? -1 : 1);
 
                     this$1.prevPos = pos !== this$1.pos ? this$1.pos : this$1.prevPos;
                     this$1.pos = pos;
@@ -153,20 +157,33 @@
                 name: uikitUtil.pointerDown,
 
                 delegate: function() {
-                    return this.slidesSelector;
+                    return this.selSlides;
                 },
 
                 handler: function(e) {
 
-                    if (!uikitUtil.isTouch(e) && hasTextNodesOnly(e.target)
+                    if (!this.draggable
+                        || !uikitUtil.isTouch(e) && hasTextNodesOnly(e.target)
                         || e.button > 0
                         || this.length < 2
-                        || this.preventCatch
                     ) {
                         return;
                     }
 
                     this.start(e);
+                }
+
+            },
+
+            {
+
+                // Workaround for iOS 11 bug: https://bugs.webkit.org/show_bug.cgi?id=184250
+
+                name: 'touchmove',
+                passive: false,
+                handler: 'move',
+                delegate: function() {
+                    return this.selSlides;
                 }
 
             },
@@ -184,6 +201,8 @@
         methods: {
 
             start: function() {
+                var this$1 = this;
+
 
                 this.drag = this.pos;
 
@@ -192,8 +211,8 @@
                     this.percent = this._transitioner.percent();
                     this.drag += this._transitioner.getDistance() * this.percent * this.dir;
 
-                    this._transitioner.translate(this.percent);
                     this._transitioner.cancel();
+                    this._transitioner.translate(this.percent);
 
                     this.dragging = true;
 
@@ -203,9 +222,18 @@
                     this.prevIndex = this.index;
                 }
 
-                this.unbindMove = uikitUtil.on(document, uikitUtil.pointerMove, this.move, {capture: true, passive: false});
+                // See above workaround notice
+                var off = uikitUtil.pointerMove !== 'touchmove'
+                    ? uikitUtil.on(document, uikitUtil.pointerMove, this.move, {passive: false})
+                    : uikitUtil.noop;
+                this.unbindMove = function () {
+                    off();
+                    this$1.unbindMove = null;
+                };
                 uikitUtil.on(window, 'scroll', this.unbindMove);
                 uikitUtil.on(document, uikitUtil.pointerUp, this.end, true);
+
+                uikitUtil.css(this.list, 'userSelect', 'none');
 
             },
 
@@ -213,11 +241,18 @@
                 var this$1 = this;
 
 
+                // See above workaround notice
+                if (!this.unbindMove) {
+                    return;
+                }
+
                 var distance = this.pos - this.drag;
 
                 if (distance === 0 || this.prevPos === this.pos || !this.dragging && Math.abs(distance) < this.threshold) {
                     return;
                 }
+
+                uikitUtil.css(this.list, 'pointerEvents', 'none');
 
                 e.cancelable && e.preventDefault();
 
@@ -234,12 +269,12 @@
 
                 while (nextIndex !== prevIndex && dis > width) {
 
-                    this$1.drag -= width * this$1.dir;
+                    this.drag -= width * this.dir;
 
                     prevIndex = nextIndex;
                     dis -= width;
-                    nextIndex = this$1.getIndex(prevIndex + this$1.dir, prevIndex);
-                    width = this$1._getDistance(prevIndex, nextIndex) || slides[prevIndex].offsetWidth;
+                    nextIndex = this.getIndex(prevIndex + this.dir, prevIndex);
+                    width = this._getDistance(prevIndex, nextIndex) || slides[prevIndex].offsetWidth;
 
                 }
 
@@ -286,7 +321,7 @@
             end: function() {
 
                 uikitUtil.off(window, 'scroll', this.unbindMove);
-                this.unbindMove();
+                this.unbindMove && this.unbindMove();
                 uikitUtil.off(document, uikitUtil.pointerUp, this.end, true);
 
                 if (this.dragging) {
@@ -310,9 +345,9 @@
                         this.show(this.dir > 0 && !dirChange || this.dir < 0 && dirChange ? 'next' : 'previous', true);
                     }
 
-                    uikitUtil.preventClick();
-
                 }
+
+                uikitUtil.css(this.list, {userSelect: '', pointerEvents: ''});
 
                 this.drag
                     = this.percent
@@ -342,41 +377,37 @@
                 return uikitUtil.$(selNav, $el);
             },
 
-            navItemSelector: function(ref) {
+            selNavItem: function(ref) {
                 var attrItem = ref.attrItem;
 
                 return ("[" + attrItem + "],[data-" + attrItem + "]");
             },
 
             navItems: function(_, $el) {
-                return uikitUtil.$$(this.navItemSelector, $el);
+                return uikitUtil.$$(this.selNavItem, $el);
             }
 
         },
 
-        update: [
+        update: {
 
-            {
-
-                write: function() {
-                    var this$1 = this;
+            write: function() {
+                var this$1 = this;
 
 
-                    if (this.nav && this.length !== this.nav.children.length) {
-                        uikitUtil.html(this.nav, this.slides.map(function (_, i) { return ("<li " + (this$1.attrItem) + "=\"" + i + "\"><a href=\"#\"></a></li>"); }).join(''));
-                    }
+                if (this.nav && this.length !== this.nav.children.length) {
+                    uikitUtil.html(this.nav, this.slides.map(function (_, i) { return ("<li " + (this$1.attrItem) + "=\"" + i + "\"><a href=\"#\"></a></li>"); }).join(''));
+                }
 
-                    uikitUtil.toggleClass(uikitUtil.$$(this.navItemSelector, this.$el).concat(this.nav), 'uk-hidden', !this.maxIndex);
+                uikitUtil.toggleClass(uikitUtil.$$(this.selNavItem, this.$el).concat(this.nav), 'uk-hidden', !this.maxIndex);
 
-                    this.updateNav();
+                this.updateNav();
 
-                },
+            },
 
-                events: ['load', 'resize']
+            events: ['resize']
 
-            }
-
-        ],
+        },
 
         events: [
 
@@ -385,12 +416,11 @@
                 name: 'click',
 
                 delegate: function() {
-                    return this.navItemSelector;
+                    return this.selNavItem;
                 },
 
                 handler: function(e) {
                     e.preventDefault();
-                    e.current.blur();
                     this.show(uikitUtil.data(e.current, this.attrItem));
                 }
 
@@ -427,8 +457,6 @@
     };
 
     var Slider = {
-
-        attrs: true,
 
         mixins: [SliderAutoplay, SliderDrag, SliderNav],
 
@@ -475,7 +503,7 @@
                 return this.length - 1;
             },
 
-            slidesSelector: function(ref) {
+            selSlides: function(ref) {
                 var selList = ref.selList;
 
                 return (selList + " > *");
@@ -662,28 +690,24 @@
 
     var SliderReactive = {
 
-        update: [
+        update: {
 
-            {
+            write: function() {
 
-                write: function() {
+                if (this.stack.length || this.dragging) {
+                    return;
+                }
 
-                    if (this.stack.length || this.dragging) {
-                        return;
-                    }
+                var index = this.getValidIndex();
+                delete this.index;
+                uikitUtil.removeClass(this.slides, this.clsActive, this.clsActivated);
+                this.show(index);
 
-                    var index = this.getValidIndex();
-                    delete this.index;
-                    uikitUtil.removeClass(this.slides, this.clsActive, this.clsActivated);
-                    this.show(index);
+            },
 
-                },
+            events: ['resize']
 
-                events: ['load', 'resize']
-
-            }
-
-        ]
+        }
 
     };
 
@@ -691,7 +715,8 @@
         if ( value === void 0 ) value = 0;
         if ( unit === void 0 ) unit = '%';
 
-        return ("translateX(" + value + (value ? unit : '') + ")"); // currently not translate3d to support IE, translate3d within translate3d does not work while transitioning
+        value += value ? unit : '';
+        return uikitUtil.isIE ? ("translateX(" + value + ")") : ("translate3d(" + value + ", 0, 0)"); // currently not translate3d in IE, translate3d within translate3d does not work while transitioning
     }
 
     function Transitioner (prev, next, dir, ref) {
@@ -704,10 +729,10 @@
 
         var from = prev
             ? getLeft(prev, list, center)
-            : getLeft(next, list, center) + next.offsetWidth * dir;
+            : getLeft(next, list, center) + bounds(next).width * dir;
         var to = next
             ? getLeft(next, list, center)
-            : from + prev.offsetWidth * dir * (uikitUtil.isRtl ? -1 : 1);
+            : from + bounds(prev).width * dir * (uikitUtil.isRtl ? -1 : 1);
 
         return {
 
@@ -761,7 +786,7 @@
                 uikitUtil.css(list, 'transform', translate(uikitUtil.clamp(
                     -to + (distance - distance * percent),
                     -getWidth(list),
-                    list.offsetWidth
+                    bounds(list).width
                 ) * (uikitUtil.isRtl ? -1 : 1), 'px'));
 
                 this.updateTranslates();
@@ -800,7 +825,7 @@
 
                 return uikitUtil.sortBy(slides(list).filter(function (slide) {
                     var slideLeft = getElLeft(slide, list);
-                    return slideLeft >= left && slideLeft + slide.offsetWidth <= list.offsetWidth + left;
+                    return slideLeft >= left && slideLeft + bounds(slide).width <= bounds(list).width + left;
                 }), 'offsetLeft');
 
             },
@@ -834,23 +859,27 @@
     }
 
     function getMax(list) {
-        return Math.max(0, getWidth(list) - list.offsetWidth);
+        return Math.max(0, getWidth(list) - bounds(list).width);
     }
 
     function getWidth(list) {
-        return slides(list).reduce(function (right, el) { return el.offsetWidth + right; }, 0);
+        return slides(list).reduce(function (right, el) { return bounds(el).width + right; }, 0);
     }
 
     function getMaxWidth(list) {
-        return slides(list).reduce(function (right, el) { return Math.max(right, el.offsetWidth); }, 0);
+        return slides(list).reduce(function (right, el) { return Math.max(right, bounds(el).width); }, 0);
     }
 
     function centerEl(el, list) {
-        return list.offsetWidth / 2 - el.offsetWidth / 2;
+        return bounds(list).width / 2 - bounds(el).width / 2;
     }
 
     function getElLeft(el, list) {
-        return (el.offsetLeft + (uikitUtil.isRtl ? el.offsetWidth - list.offsetWidth : 0)) * (uikitUtil.isRtl ? -1 : 1);
+        return (uikitUtil.position(el).left + (uikitUtil.isRtl ? bounds(el).width - bounds(list).width : 0)) * (uikitUtil.isRtl ? -1 : 1);
+    }
+
+    function bounds(el) {
+        return el.getBoundingClientRect();
     }
 
     function triggerUpdate(el, type, data) {
@@ -867,7 +896,7 @@
 
         props: {
             center: Boolean,
-            sets: Boolean,
+            sets: Boolean
         },
 
         data: {
@@ -889,12 +918,10 @@
             finite: function(ref) {
                 var finite = ref.finite;
 
-                return finite || getWidth(this.list) < this.list.offsetWidth + getMaxWidth(this.list) + this.center;
+                return finite || getWidth(this.list) < bounds(this.list).width + getMaxWidth(this.list) + this.center;
             },
 
             maxIndex: function() {
-                var this$1 = this;
-
 
                 if (!this.finite || this.center && !this.sets) {
                     return this.length - 1;
@@ -910,8 +937,8 @@
                 var i = this.length;
 
                 while (i--) {
-                    if (getElLeft(this$1.list.children[i], this$1.list) < max) {
-                        return Math.min(i + 1, this$1.length - 1);
+                    if (getElLeft(this.list.children[i], this.list) < max) {
+                        return Math.min(i + 1, this.length - 1);
                     }
                 }
 
@@ -923,7 +950,7 @@
                 var sets = ref.sets;
 
 
-                var width = this.list.offsetWidth / (this.center ? 2 : 1);
+                var width = bounds(this.list).width / (this.center ? 2 : 1);
 
                 var left = 0;
                 var leftCenter = width;
@@ -931,7 +958,7 @@
 
                 sets = sets && this.slides.reduce(function (sets, slide, i) {
 
-                    var ref = uikitUtil.offset(slide);
+                    var ref = bounds(slide);
                     var slideWidth = ref.width;
                     var slideRight = slideLeft + slideWidth;
 
@@ -944,7 +971,7 @@
                         if (!uikitUtil.includes(sets, i)) {
 
                             var cmp = this$1.slides[i + 1];
-                            if (this$1.center && cmp && slideWidth < leftCenter - uikitUtil.offset(cmp).width / 2) {
+                            if (this$1.center && cmp && slideWidth < leftCenter - bounds(cmp).width / 2) {
                                 leftCenter -= slideWidth;
                             } else {
                                 leftCenter = width;
@@ -961,7 +988,7 @@
 
                 }, []);
 
-                return sets && sets.length && sets;
+                return !uikitUtil.isEmpty(sets) && sets;
 
             },
 
@@ -991,15 +1018,13 @@
 
             },
 
-            events: ['load', 'resize']
+            events: ['resize']
 
         },
 
         events: {
 
             beforeitemshow: function(e) {
-                var this$1 = this;
-
 
                 if (!this.dragging && this.sets && this.stack.length < 2 && !uikitUtil.includes(this.sets, this.index)) {
                     this.index = this.getValidIndex();
@@ -1014,7 +1039,7 @@
                 if (!this.dragging && diff > 1) {
 
                     for (var i = 0; i < diff; i++) {
-                        this$1.stack.splice(1, 0, this$1.dir > 0 ? 'next' : 'previous');
+                        this.stack.splice(1, 0, this.dir > 0 ? 'next' : 'previous');
                     }
 
                     e.preventDefault();
@@ -1022,11 +1047,11 @@
                 }
 
                 this.duration = speedUp(this.avgWidth / this.velocity)
-                    * ((
+                    * (bounds(
                         this.dir < 0 || !this.slides[this.prevIndex]
                             ? this.slides[this.index]
                             : this.slides[this.prevIndex]
-                    ).offsetWidth / this.avgWidth);
+                    ).width / this.avgWidth);
 
                 this.reorder();
 
@@ -1073,21 +1098,20 @@
                 }
 
                 var next = this.slides[index];
-                var width = this.list.offsetWidth / 2 - next.offsetWidth / 2;
+                var width = bounds(this.list).width / 2 - bounds(next).width / 2;
                 var j = 0;
 
                 while (width > 0) {
-                    var slideIndex = this$1.getIndex(--j + index, index);
-                    var slide = this$1.slides[slideIndex];
+                    var slideIndex = this.getIndex(--j + index, index);
+                    var slide = this.slides[slideIndex];
 
                     uikitUtil.css(slide, 'order', slideIndex > index ? -2 : -1);
-                    width -= slide.offsetWidth;
+                    width -= bounds(slide).width;
                 }
 
             },
 
             getValidIndex: function(index, prevIndex) {
-                var this$1 = this;
                 if ( index === void 0 ) index = this.index;
                 if ( prevIndex === void 0 ) prevIndex = this.prevIndex;
 
@@ -1102,12 +1126,12 @@
 
                 do {
 
-                    if (uikitUtil.includes(this$1.sets, index)) {
+                    if (uikitUtil.includes(this.sets, index)) {
                         return index;
                     }
 
                     prev = index;
-                    index = this$1.getIndex(index + this$1.dir, prevIndex);
+                    index = this.getIndex(index + this.dir, prevIndex);
 
                 } while (index !== prev);
 
@@ -1124,4 +1148,6 @@
         window.UIkit.component('slider', Component);
     }
 
-})));
+    return Component;
+
+}));

@@ -1,15 +1,15 @@
-/*! UIkit 3.0.0-rc.5 | http://www.getuikit.com | (c) 2014 - 2017 YOOtheme | MIT License */
+/*! UIkit 3.1.6 | http://www.getuikit.com | (c) 2014 - 2018 YOOtheme | MIT License */
 
 (function (global, factory) {
-    typeof exports === 'object' && typeof module !== 'undefined' ? factory(require('uikit-util')) :
+    typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('uikit-util')) :
     typeof define === 'function' && define.amd ? define('uikitslideshow', ['uikit-util'], factory) :
-    (factory(global.UIkit.util));
-}(this, (function (uikitUtil) { 'use strict';
+    (global = global || self, global.UIkitSlideshow = factory(global.UIkit.util));
+}(this, function (uikitUtil) { 'use strict';
 
     var Class = {
 
         connected: function() {
-            uikitUtil.addClass(this.$el, this.$name);
+            !uikitUtil.hasClass(this.$el, this.$name) && uikitUtil.addClass(this.$el, this.$name);
         }
 
     };
@@ -48,7 +48,8 @@
         if ( value === void 0 ) value = 0;
         if ( unit === void 0 ) unit = '%';
 
-        return ("translateX(" + value + (value ? unit : '') + ")"); // currently not translate3d to support IE, translate3d within translate3d does not work while transitioning
+        value += value ? unit : '';
+        return uikitUtil.isIE ? ("translateX(" + value + ")") : ("translate3d(" + value + ", 0, 0)"); // currently not translate3d in IE, translate3d within translate3d does not work while transitioning
     }
 
     function scale3d(value) {
@@ -133,7 +134,7 @@
             },
 
             getDistance: function() {
-                return prev.offsetWidth;
+                return prev && prev.offsetWidth;
             }
 
         };
@@ -159,11 +160,15 @@
         },
 
         connected: function() {
-            this.startAutoplay();
+            this.autoplay && this.startAutoplay();
         },
 
         disconnected: function() {
             this.stopAutoplay();
+        },
+
+        update: function() {
+            uikitUtil.attr(this.slides, 'tabindex', '-1');
         },
 
         events: [
@@ -173,6 +178,10 @@
                 name: 'visibilitychange',
 
                 el: document,
+
+                filter: function() {
+                    return this.autoplay;
+                },
 
                 handler: function() {
                     if (document.hidden) {
@@ -186,17 +195,10 @@
 
             {
 
-                name: uikitUtil.pointerDown,
-                handler: 'stopAutoplay'
-
-            },
-
-            {
-
                 name: 'mouseenter',
 
                 filter: function() {
-                    return this.autoplay;
+                    return this.autoplay && this.pauseOnHover;
                 },
 
                 handler: function() {
@@ -210,7 +212,7 @@
                 name: 'mouseleave',
 
                 filter: function() {
-                    return this.autoplay;
+                    return this.autoplay && this.pauseOnHover;
                 },
 
                 handler: function() {
@@ -229,19 +231,18 @@
 
                 this.stopAutoplay();
 
-                if (this.autoplay) {
-                    this.interval = setInterval(
-                        function () { return !(this$1.isHovering && this$1.pauseOnHover) && !this$1.stack.length && this$1.show('next'); },
-                        this.autoplayInterval
-                    );
-                }
+                this.interval = setInterval(
+                    function () { return !uikitUtil.within(document.activeElement, this$1.$el)
+                        && !this$1.isHovering
+                        && !this$1.stack.length
+                        && this$1.show('next'); },
+                    this.autoplayInterval
+                );
 
             },
 
             stopAutoplay: function() {
-                if (this.interval) {
-                    clearInterval(this.interval);
-                }
+                this.interval && clearInterval(this.interval);
             }
 
         }
@@ -250,12 +251,16 @@
 
     var SliderDrag = {
 
-        data: {
-            threshold: 10,
-            preventCatch: false
+        props: {
+            draggable: Boolean
         },
 
-        init: function() {
+        data: {
+            draggable: true,
+            threshold: 10
+        },
+
+        created: function() {
             var this$1 = this;
 
 
@@ -264,7 +269,7 @@
                 var fn = this$1[key];
                 this$1[key] = function (e) {
 
-                    var pos = uikitUtil.getPos(e).x * (uikitUtil.isRtl ? -1 : 1);
+                    var pos = uikitUtil.getEventPos(e).x * (uikitUtil.isRtl ? -1 : 1);
 
                     this$1.prevPos = pos !== this$1.pos ? this$1.pos : this$1.prevPos;
                     this$1.pos = pos;
@@ -283,20 +288,33 @@
                 name: uikitUtil.pointerDown,
 
                 delegate: function() {
-                    return this.slidesSelector;
+                    return this.selSlides;
                 },
 
                 handler: function(e) {
 
-                    if (!uikitUtil.isTouch(e) && hasTextNodesOnly(e.target)
+                    if (!this.draggable
+                        || !uikitUtil.isTouch(e) && hasTextNodesOnly(e.target)
                         || e.button > 0
                         || this.length < 2
-                        || this.preventCatch
                     ) {
                         return;
                     }
 
                     this.start(e);
+                }
+
+            },
+
+            {
+
+                // Workaround for iOS 11 bug: https://bugs.webkit.org/show_bug.cgi?id=184250
+
+                name: 'touchmove',
+                passive: false,
+                handler: 'move',
+                delegate: function() {
+                    return this.selSlides;
                 }
 
             },
@@ -314,6 +332,8 @@
         methods: {
 
             start: function() {
+                var this$1 = this;
+
 
                 this.drag = this.pos;
 
@@ -322,8 +342,8 @@
                     this.percent = this._transitioner.percent();
                     this.drag += this._transitioner.getDistance() * this.percent * this.dir;
 
-                    this._transitioner.translate(this.percent);
                     this._transitioner.cancel();
+                    this._transitioner.translate(this.percent);
 
                     this.dragging = true;
 
@@ -333,9 +353,18 @@
                     this.prevIndex = this.index;
                 }
 
-                this.unbindMove = uikitUtil.on(document, uikitUtil.pointerMove, this.move, {capture: true, passive: false});
+                // See above workaround notice
+                var off = uikitUtil.pointerMove !== 'touchmove'
+                    ? uikitUtil.on(document, uikitUtil.pointerMove, this.move, {passive: false})
+                    : uikitUtil.noop;
+                this.unbindMove = function () {
+                    off();
+                    this$1.unbindMove = null;
+                };
                 uikitUtil.on(window, 'scroll', this.unbindMove);
                 uikitUtil.on(document, uikitUtil.pointerUp, this.end, true);
+
+                uikitUtil.css(this.list, 'userSelect', 'none');
 
             },
 
@@ -343,11 +372,18 @@
                 var this$1 = this;
 
 
+                // See above workaround notice
+                if (!this.unbindMove) {
+                    return;
+                }
+
                 var distance = this.pos - this.drag;
 
                 if (distance === 0 || this.prevPos === this.pos || !this.dragging && Math.abs(distance) < this.threshold) {
                     return;
                 }
+
+                uikitUtil.css(this.list, 'pointerEvents', 'none');
 
                 e.cancelable && e.preventDefault();
 
@@ -364,12 +400,12 @@
 
                 while (nextIndex !== prevIndex && dis > width) {
 
-                    this$1.drag -= width * this$1.dir;
+                    this.drag -= width * this.dir;
 
                     prevIndex = nextIndex;
                     dis -= width;
-                    nextIndex = this$1.getIndex(prevIndex + this$1.dir, prevIndex);
-                    width = this$1._getDistance(prevIndex, nextIndex) || slides[prevIndex].offsetWidth;
+                    nextIndex = this.getIndex(prevIndex + this.dir, prevIndex);
+                    width = this._getDistance(prevIndex, nextIndex) || slides[prevIndex].offsetWidth;
 
                 }
 
@@ -416,7 +452,7 @@
             end: function() {
 
                 uikitUtil.off(window, 'scroll', this.unbindMove);
-                this.unbindMove();
+                this.unbindMove && this.unbindMove();
                 uikitUtil.off(document, uikitUtil.pointerUp, this.end, true);
 
                 if (this.dragging) {
@@ -440,9 +476,9 @@
                         this.show(this.dir > 0 && !dirChange || this.dir < 0 && dirChange ? 'next' : 'previous', true);
                     }
 
-                    uikitUtil.preventClick();
-
                 }
+
+                uikitUtil.css(this.list, {userSelect: '', pointerEvents: ''});
 
                 this.drag
                     = this.percent
@@ -472,41 +508,37 @@
                 return uikitUtil.$(selNav, $el);
             },
 
-            navItemSelector: function(ref) {
+            selNavItem: function(ref) {
                 var attrItem = ref.attrItem;
 
                 return ("[" + attrItem + "],[data-" + attrItem + "]");
             },
 
             navItems: function(_, $el) {
-                return uikitUtil.$$(this.navItemSelector, $el);
+                return uikitUtil.$$(this.selNavItem, $el);
             }
 
         },
 
-        update: [
+        update: {
 
-            {
-
-                write: function() {
-                    var this$1 = this;
+            write: function() {
+                var this$1 = this;
 
 
-                    if (this.nav && this.length !== this.nav.children.length) {
-                        uikitUtil.html(this.nav, this.slides.map(function (_, i) { return ("<li " + (this$1.attrItem) + "=\"" + i + "\"><a href=\"#\"></a></li>"); }).join(''));
-                    }
+                if (this.nav && this.length !== this.nav.children.length) {
+                    uikitUtil.html(this.nav, this.slides.map(function (_, i) { return ("<li " + (this$1.attrItem) + "=\"" + i + "\"><a href=\"#\"></a></li>"); }).join(''));
+                }
 
-                    uikitUtil.toggleClass(uikitUtil.$$(this.navItemSelector, this.$el).concat(this.nav), 'uk-hidden', !this.maxIndex);
+                uikitUtil.toggleClass(uikitUtil.$$(this.selNavItem, this.$el).concat(this.nav), 'uk-hidden', !this.maxIndex);
 
-                    this.updateNav();
+                this.updateNav();
 
-                },
+            },
 
-                events: ['load', 'resize']
+            events: ['resize']
 
-            }
-
-        ],
+        },
 
         events: [
 
@@ -515,12 +547,11 @@
                 name: 'click',
 
                 delegate: function() {
-                    return this.navItemSelector;
+                    return this.selNavItem;
                 },
 
                 handler: function(e) {
                     e.preventDefault();
-                    e.current.blur();
                     this.show(uikitUtil.data(e.current, this.attrItem));
                 }
 
@@ -557,8 +588,6 @@
     };
 
     var Slider = {
-
-        attrs: true,
 
         mixins: [SliderAutoplay, SliderDrag, SliderNav],
 
@@ -605,7 +634,7 @@
                 return this.length - 1;
             },
 
-            slidesSelector: function(ref) {
+            selSlides: function(ref) {
                 var selList = ref.selList;
 
                 return (selList + " > *");
@@ -809,9 +838,9 @@
 
             animation: function(ref) {
                 var animation = ref.animation;
-                var Animations$$1 = ref.Animations;
+                var Animations = ref.Animations;
 
-                return uikitUtil.assign(animation in Animations$$1 ? Animations$$1[animation] : Animations$$1.slide, {name: animation});
+                return uikitUtil.assign(animation in Animations ? Animations[animation] : Animations.slide, {name: animation});
             },
 
             transitionOptions: function() {
@@ -826,10 +855,6 @@
                 var target = ref.target;
 
                 this.$update(target);
-            },
-
-            itemshow: function() {
-                uikitUtil.isNumber(this.prevIndex) && uikitUtil.fastdom.flush(); // iOS 10+ will honor the video.play only if called from a gesture handler
             },
 
             beforeitemshow: function(ref) {
@@ -906,7 +931,8 @@
                 return dir < 0
                     ? [
                         {transform: translate(30), zIndex: -1},
-                        {transform: translate(), zIndex: 0} ]
+                        {transform: translate(), zIndex: 0}
+                    ]
                     : [
                         {transform: translate(-100), zIndex: 0},
                         {transform: translate(), zIndex: -1}
@@ -923,7 +949,8 @@
                 return dir < 0
                     ? [
                         {transform: translate(30 * percent), zIndex: -1},
-                        {transform: translate(-100 * (1 - percent)), zIndex: 0} ]
+                        {transform: translate(-100 * (1 - percent)), zIndex: 0}
+                    ]
                     : [
                         {transform: translate(-percent * 100), zIndex: 0},
                         {transform: translate(30 * (1 - percent)), zIndex: -1}
@@ -938,7 +965,8 @@
                 return dir < 0
                     ? [
                         {transform: translate(100), zIndex: 0},
-                        {transform: translate(), zIndex: -1} ]
+                        {transform: translate(), zIndex: -1}
+                    ]
                     : [
                         {transform: translate(-30), zIndex: -1},
                         {transform: translate(), zIndex: 0}
@@ -955,7 +983,8 @@
                 return dir < 0
                     ? [
                         {transform: translate(percent * 100), zIndex: 0},
-                        {transform: translate(-30 * (1 - percent)), zIndex: -1} ]
+                        {transform: translate(-30 * (1 - percent)), zIndex: -1}
+                    ]
                     : [
                         {transform: translate(-30 * percent), zIndex: -1},
                         {transform: translate(100 * (1 - percent)), zIndex: 0}
@@ -968,28 +997,24 @@
 
     var SliderReactive = {
 
-        update: [
+        update: {
 
-            {
+            write: function() {
 
-                write: function() {
+                if (this.stack.length || this.dragging) {
+                    return;
+                }
 
-                    if (this.stack.length || this.dragging) {
-                        return;
-                    }
+                var index = this.getValidIndex();
+                delete this.index;
+                uikitUtil.removeClass(this.slides, this.clsActive, this.clsActivated);
+                this.show(index);
 
-                    var index = this.getValidIndex();
-                    delete this.index;
-                    uikitUtil.removeClass(this.slides, this.clsActive, this.clsActivated);
-                    this.show(index);
+            },
 
-                },
+            events: ['resize']
 
-                events: ['load', 'resize']
-
-            }
-
-        ]
+        }
 
     };
 
@@ -999,8 +1024,8 @@
 
         props: {
             ratio: String,
-            minHeight: Boolean,
-            maxHeight: Boolean,
+            minHeight: Number,
+            maxHeight: Number
         },
 
         data: {
@@ -1021,7 +1046,7 @@
                 var width = ref[0];
                 var height = ref[1];
 
-                height = height * this.$el.offsetWidth / width;
+                height = height * this.list.offsetWidth / width || 0;
 
                 if (this.minHeight) {
                     height = Math.max(this.minHeight, height);
@@ -1031,16 +1056,16 @@
                     height = Math.min(this.maxHeight, height);
                 }
 
-                return {height: height};
+                return {height: height - uikitUtil.boxModelAdjust(this.list, 'content-box')};
             },
 
             write: function(ref) {
-                var hgt = ref.height;
+                var height = ref.height;
 
-                uikitUtil.height(this.list, Math.floor(hgt));
+                uikitUtil.css(this.list, 'minHeight', height);
             },
 
-            events: ['load', 'resize']
+            events: ['resize']
 
         }
 
@@ -1052,4 +1077,6 @@
         window.UIkit.component('slideshow', Component);
     }
 
-})));
+    return Component;
+
+}));

@@ -1,10 +1,10 @@
-/*! UIkit 3.0.0-rc.5 | http://www.getuikit.com | (c) 2014 - 2017 YOOtheme | MIT License */
+/*! UIkit 3.1.6 | http://www.getuikit.com | (c) 2014 - 2018 YOOtheme | MIT License */
 
 (function (global, factory) {
-    typeof exports === 'object' && typeof module !== 'undefined' ? factory(require('uikit-util')) :
+    typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('uikit-util')) :
     typeof define === 'function' && define.amd ? define('uikitnotification', ['uikit-util'], factory) :
-    (factory(global.UIkit.util));
-}(this, (function (uikitUtil) { 'use strict';
+    (global = global || self, global.UIkitNotification = factory(global.UIkit.util));
+}(this, function (uikitUtil) { 'use strict';
 
     var obj;
 
@@ -28,6 +28,22 @@
 
         install: install,
 
+        computed: {
+
+            marginProp: function(ref) {
+                var pos = ref.pos;
+
+                return ("margin" + (uikitUtil.startsWith(pos, 'top') ? 'Top' : 'Bottom'));
+            },
+
+            startProps: function() {
+                var obj;
+
+                return ( obj = {opacity: 0}, obj[this.marginProp] = -this.$el.offsetHeight, obj );
+            }
+
+        },
+
         created: function() {
 
             if (!containers[this.pos]) {
@@ -42,14 +58,15 @@
 
         },
 
-        ready: function() {
+        connected: function() {
             var this$1 = this;
+            var obj;
 
 
-            var marginBottom = uikitUtil.toFloat(uikitUtil.css(this.$el, 'marginBottom'));
+            var margin = uikitUtil.toFloat(uikitUtil.css(this.$el, this.marginProp));
             uikitUtil.Transition.start(
-                uikitUtil.css(this.$el, {opacity: 0, marginTop: -this.$el.offsetHeight, marginBottom: 0}),
-                {opacity: 1, marginTop: 0, marginBottom: marginBottom}
+                uikitUtil.css(this.$el, this.startProps),
+                ( obj = {opacity: 1}, obj[this.marginProp] = margin, obj )
             ).then(function () {
                 if (this$1.timeout) {
                     this$1.timer = setTimeout(this$1.close, this$1.timeout);
@@ -61,7 +78,7 @@
         events: ( obj = {
 
             click: function(e) {
-                if (uikitUtil.closest(e.target, 'a[href="#"]')) {
+                if (uikitUtil.closest(e.target, 'a[href="#"],a[href=""]')) {
                     e.preventDefault();
                 }
                 this.close();
@@ -101,11 +118,7 @@
                 if (immediate) {
                     removeFn();
                 } else {
-                    uikitUtil.Transition.start(this.$el, {
-                        opacity: 0,
-                        marginTop: -this.$el.offsetHeight,
-                        marginBottom: 0
-                    }).then(removeFn);
+                    uikitUtil.Transition.start(this.$el, this.startProps).then(removeFn);
                 }
             }
 
@@ -130,4 +143,6 @@
         window.UIkit.component('notification', Component);
     }
 
-})));
+    return Component;
+
+}));

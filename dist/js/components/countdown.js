@@ -1,15 +1,15 @@
-/*! UIkit 3.0.0-rc.5 | http://www.getuikit.com | (c) 2014 - 2017 YOOtheme | MIT License */
+/*! UIkit 3.1.6 | http://www.getuikit.com | (c) 2014 - 2018 YOOtheme | MIT License */
 
 (function (global, factory) {
-    typeof exports === 'object' && typeof module !== 'undefined' ? factory(require('uikit-util')) :
+    typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('uikit-util')) :
     typeof define === 'function' && define.amd ? define('uikitcountdown', ['uikit-util'], factory) :
-    (factory(global.UIkit.util));
-}(this, (function (uikitUtil) { 'use strict';
+    (global = global || self, global.UIkitCountdown = factory(global.UIkit.util));
+}(this, function (uikitUtil) { 'use strict';
 
     var Class = {
 
         connected: function() {
-            uikitUtil.addClass(this.$el, this.$name);
+            !uikitUtil.hasClass(this.$el, this.$name) && uikitUtil.addClass(this.$el, this.$name);
         }
 
     };
@@ -17,8 +17,6 @@
     var Component = {
 
         mixins: [Class],
-
-        attrs: true,
 
         props: {
             date: String,
@@ -190,4 +188,6 @@
         window.UIkit.component('countdown', Component);
     }
 
-})));
+    return Component;
+
+}));
