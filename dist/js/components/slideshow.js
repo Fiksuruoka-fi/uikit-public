@@ -962,6 +962,44 @@
                     ];
             }
 
+        },
+
+        pushFade: {
+
+            show: function(dir) {
+                console.log('Show: ', dir);
+                return dir < 0
+                    ? [
+                        {transform: translate(100), zIndex: 0},
+                        {transform: translate(), zIndex: -1} ]
+                    : [
+                        {transform: translate(-30), zIndex: -1},
+                        {transform: translate(), zIndex: 0}
+                    ];
+            },
+
+            percent: function(current, next, dir) {
+                console.log('Percent current: ', current);
+                console.log('Percent next: ', next);
+                console.log('Percent dir: ', dir);
+                return dir > 0
+                    ? 1 - translated(next)
+                    : translated(current);
+            },
+
+            translate: function(percent, dir) {
+                console.log('Translate percent: ', percent);
+                console.log('Translate dir: ', dir);
+                return dir < 0
+                    ? [
+                        {transform: translate(percent * 100), zIndex: 0},
+                        {transform: translate(-30 * (1 - percent)), zIndex: -1} ]
+                    : [
+                        {transform: translate(-30 * percent), zIndex: -1},
+                        {transform: translate(100 * (1 - percent)), zIndex: 0}
+                    ];
+            }
+
         }
 
     });
