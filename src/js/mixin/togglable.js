@@ -1,4 +1,4 @@
-import {$$, Animation, assign, attr, css, fastdom, hasAttr, hasClass, height, includes, isBoolean, isFunction, isUndefined, isVisible, noop, Promise, toFloat, toggleClass, toNodes, Transition, trigger} from 'uikit-util';
+import {$$, Animation, assign, attr, css, fastdom, hasAttr, hasClass, height, includes, isBoolean, isFunction, isVisible, noop, Promise, toFloat, toggleClass, toNodes, Transition, trigger} from 'uikit-util';
 
 export default {
 
@@ -7,8 +7,7 @@ export default {
         animation: 'list',
         duration: Number,
         origin: String,
-        transition: String,
-        queued: Boolean
+        transition: String
     },
 
     data: {
@@ -17,7 +16,6 @@ export default {
         duration: 200,
         origin: false,
         transition: 'linear',
-        queued: false,
 
         initProps: {
             overflow: '',
@@ -54,47 +52,11 @@ export default {
     methods: {
 
         toggleElement(targets, show, animate) {
-            return new Promise(resolve => {
-
-                targets = toNodes(targets);
-
-                const all = targets => Promise.all(targets.map(el => this._toggleElement(el, show, animate)));
-                const toggled = targets.filter(el => this.isToggled(el));
-                const untoggled = targets.filter(el => !includes(toggled, el));
-
-                let p;
-
-                if (!this.queued || !isUndefined(animate) || !isUndefined(show) || !this.hasAnimation || targets.length < 2) {
-
-                    p = all(untoggled.concat(toggled));
-
-                } else {
-
-                    const {body} = document;
-                    const scroll = body.scrollTop;
-                    const [el] = toggled;
-                    const inProgress = Animation.inProgress(el) && hasClass(el, 'uk-animation-leave')
-                            || Transition.inProgress(el) && el.style.height === '0px';
-
-                    p = all(toggled);
-
-                    if (!inProgress) {
-                        p = p.then(() => {
-                            const p = all(untoggled);
-                            body.scrollTop = scroll;
-                            return p;
-                        });
-                    }
-
-                }
-
-                p.then(resolve, noop);
-
-            });
-        },
-
-        toggleNow(targets, show) {
-            return new Promise(resolve => Promise.all(toNodes(targets).map(el => this._toggleElement(el, show, false))).then(resolve, noop));
+            return Promise.all(toNodes(targets).map(el =>
+                new Promise(resolve =>
+                    this._toggleElement(el, show, animate).then(resolve, noop)
+                )
+            ));
         },
 
         isToggled(el) {
@@ -164,14 +126,18 @@ export default {
             $$('[autofocus]', el).some(el => isVisible(el) ? el.focus() || true : el.blur());
 
             this.updateAria(el);
-            changed && this.$update(el);
+
+            if (changed) {
+                trigger(el, 'toggled', [this]);
+                this.$update(el);
+            }
         }
 
     }
 
 };
 
-function toggleHeight({isToggled, duration, initProps, hideProps, transition, _toggle}) {
+export function toggleHeight({isToggled, duration, initProps, hideProps, transition, _toggle}) {
     return (el, show) => {
 
         const inProgress = Transition.inProgress(el);
@@ -200,16 +166,18 @@ function toggleHeight({isToggled, duration, initProps, hideProps, transition, _t
     };
 }
 
-function toggleAnimation({animation, duration, origin, _toggle}) {
+function toggleAnimation(cmp) {
     return (el, show) => {
 
         Animation.cancel(el);
 
+        const {animation, duration, _toggle} = cmp;
+
         if (show) {
             _toggle(el, true);
-            return Animation.in(el, animation[0], duration, origin);
+            return Animation.in(el, animation[0], duration, cmp.origin);
         }
 
-        return Animation.out(el, animation[1] || animation[0], duration, origin).then(() => _toggle(el, false));
+        return Animation.out(el, animation[1] || animation[0], duration, cmp.origin).then(() => _toggle(el, false));
     };
 }

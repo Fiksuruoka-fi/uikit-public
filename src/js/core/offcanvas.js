@@ -1,5 +1,5 @@
 import Modal from '../mixin/modal';
-import {$, addClass, append, css, endsWith, hasClass, height, removeClass, trigger, unwrap, wrapAll} from 'uikit-util';
+import {$, addClass, append, css, endsWith, hasClass, height, removeClass, unwrap, wrapAll} from 'uikit-util';
 
 export default {
 
@@ -25,7 +25,8 @@ export default {
         clsSidebarAnimation: 'uk-offcanvas-bar-animation',
         clsMode: 'uk-offcanvas',
         clsOverlay: 'uk-offcanvas-overlay',
-        selClose: '.uk-offcanvas-close'
+        selClose: '.uk-offcanvas-close',
+        container: false
     },
 
     computed: {
@@ -66,8 +67,8 @@ export default {
                 return 'a[href^="#"]';
             },
 
-            handler({current}) {
-                if (current.hash && $(current.hash, document.body)) {
+            handler({current: {hash}, defaultPrevented}) {
+                if (!defaultPrevented && hash && $(hash, document.body)) {
                     this.hide();
                 }
             }
@@ -152,6 +153,7 @@ export default {
 
                 css(document.documentElement, 'overflowY', this.overlay ? 'hidden' : '');
                 addClass(document.body, this.clsContainer, this.clsFlip);
+                css(document.body, 'touch-action', 'pan-y pinch-zoom');
                 css(this.$el, 'display', 'block');
                 addClass(this.$el, this.clsOverlay);
                 addClass(this.panel, this.clsSidebarAnimation, this.mode !== 'reveal' ? this.clsMode : '');
@@ -160,6 +162,7 @@ export default {
                 addClass(document.body, this.clsContainerAnimation);
 
                 this.clsContainerAnimation && suppressUserScale();
+
 
             }
         },
@@ -171,11 +174,7 @@ export default {
 
             handler() {
                 removeClass(document.body, this.clsContainerAnimation);
-
-                const active = this.getActive();
-                if (this.mode === 'none' || active && active !== this && active !== this.prev) {
-                    trigger(this.panel, 'transitionend');
-                }
+                css(document.body, 'touch-action', '');
             }
         },
 

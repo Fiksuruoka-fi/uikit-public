@@ -23,18 +23,18 @@ export function transition(element, props, duration = 400, timing = 'linear') {
                 clearTimeout(timer);
                 removeClass(element, 'uk-transition');
                 css(element, {
-                    'transition-property': '',
-                    'transition-duration': '',
-                    'transition-timing-function': ''
+                    transitionProperty: '',
+                    transitionDuration: '',
+                    transitionTimingFunction: ''
                 });
                 type === 'transitioncanceled' ? reject() : resolve();
-            }, false, ({target}) => element === target);
+            }, {self: true});
 
             addClass(element, 'uk-transition');
             css(element, assign({
-                'transition-property': Object.keys(props).map(propName).join(','),
-                'transition-duration': `${duration}ms`,
-                'transition-timing-function': timing
+                transitionProperty: Object.keys(props).map(propName).join(','),
+                transitionDuration: `${duration}ms`,
+                transitionTimingFunction: timing
             }, props));
 
         })
@@ -62,65 +62,32 @@ export const Transition = {
 };
 
 const animationPrefix = 'uk-animation-';
-const clsCancelAnimation = 'uk-cancel-animation';
 
 export function animate(element, animation, duration = 200, origin, out) {
 
     return Promise.all(toNodes(element).map(element =>
         new Promise((resolve, reject) => {
 
-            if (hasClass(element, clsCancelAnimation)) {
-                requestAnimationFrame(() =>
-                    Promise.resolve().then(() =>
-                        animate(...arguments).then(resolve, reject)
-                    )
-                );
-                return;
-            }
-
-            let cls = `${animation} ${animationPrefix}${out ? 'leave' : 'enter'}`;
-
-            if (startsWith(animation, animationPrefix)) {
-
-                if (origin) {
-                    cls += ` uk-transform-origin-${origin}`;
-                }
-
-                if (out) {
-                    cls += ` ${animationPrefix}reverse`;
-                }
-
-            }
-
             reset();
 
             once(element, 'animationend animationcancel', ({type}) => {
 
-                let hasReset = false;
-
                 if (type === 'animationcancel') {
                     reject();
-                    reset();
                 } else {
                     resolve();
-                    Promise.resolve().then(() => {
-                        hasReset = true;
-                        reset();
-                    });
                 }
 
-                requestAnimationFrame(() => {
-                    if (!hasReset) {
-                        addClass(element, clsCancelAnimation);
+                reset();
 
-                        requestAnimationFrame(() => removeClass(element, clsCancelAnimation));
-                    }
-                });
-
-            }, false, ({target}) => element === target);
+            }, {self: true});
 
             css(element, 'animationDuration', `${duration}ms`);
-            addClass(element, cls);
+            addClass(element, animation, animationPrefix + (out ? 'leave' : 'enter'));
+
+            if (startsWith(animation, animationPrefix)) {
+                addClass(element, origin && `uk-transform-origin-${origin}`, out && `${animationPrefix}reverse`);
+            }
 
             function reset() {
                 css(element, 'animationDuration', '');
