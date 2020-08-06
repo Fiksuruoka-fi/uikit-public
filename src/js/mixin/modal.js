@@ -1,9 +1,9 @@
-import {$, addClass, append, css, hasClass, on, once, pointerUp, Promise, removeClass, toMs, width, within} from 'uikit-util';
+import {$, addClass, append, css, includes, last, on, once, pointerCancel, pointerDown, pointerUp, Promise, removeClass, toMs, width, within} from 'uikit-util';
 import Class from './class';
 import Container from './container';
 import Togglable from './togglable';
 
-let active;
+const active = [];
 
 export default {
 
@@ -43,7 +43,7 @@ export default {
 
     beforeDisconnect() {
         if (this.isToggled()) {
-            this.toggleNow(this.$el, false);
+            this.toggleElement(this.$el, false, false);
         }
     },
 
@@ -77,7 +77,10 @@ export default {
                 }
 
                 e.preventDefault();
-                this.toggle();
+
+                if (this.isToggled() === includes(active, this)) {
+                    this.toggle();
+                }
             }
 
         },
@@ -89,31 +92,16 @@ export default {
 
             handler(e) {
 
-                const prev = active && active !== this && active;
-
-                active = this;
-
-                if (prev) {
-                    if (this.stack) {
-                        this.prev = prev;
-                    } else {
-
-                        active = prev;
-
-                        if (prev.isToggled()) {
-                            prev.hide().then(this.show);
-                        } else {
-                            once(prev.$el, 'beforeshow hidden', this.show, false, ({target, type}) => type === 'hidden' && target === prev.$el);
-                        }
-                        e.preventDefault();
-
-                    }
-
-                    return;
+                if (includes(active, this)) {
+                    return false;
                 }
 
-                registerEvents();
-
+                if (!this.stack && active.length) {
+                    Promise.all(active.map(modal => modal.hide())).then(this.show);
+                    e.preventDefault();
+                } else {
+                    active.push(this);
+                }
             }
 
         },
@@ -126,26 +114,37 @@ export default {
 
             handler() {
 
-                if (!hasClass(document.documentElement, this.clsPage)) {
-                    this.scrollbarWidth = width(window) - width(document);
-                    css(document.body, 'overflowY', this.scrollbarWidth && this.overlay ? 'scroll' : '');
+                if (width(window) - width(document) && this.overlay) {
+                    css(document.body, 'overflowY', 'scroll');
                 }
+
+                this.stack && css(this.$el, 'zIndex', css(this.$el, 'zIndex') + active.length);
 
                 addClass(document.documentElement, this.clsPage);
 
-            }
+                if (this.bgClose) {
+                    once(this.$el, 'hide', on(document, pointerDown, ({target}) => {
 
-        },
+                        if (last(active) !== this || this.overlay && !within(target, this.$el) || within(target, this.panel)) {
+                            return;
+                        }
 
-        {
+                        once(document, `${pointerUp} ${pointerCancel} scroll`, ({defaultPrevented, type, target: newTarget}) => {
+                            if (!defaultPrevented && type === pointerUp && target === newTarget) {
+                                this.hide();
+                            }
+                        }, true);
 
-            name: 'hide',
+                    }), {self: true});
+                }
 
-            self: true,
-
-            handler() {
-                if (!active || active === this && !this.prev) {
-                    deregisterEvents();
+                if (this.escClose) {
+                    once(this.$el, 'hide', on(document, 'keydown', e => {
+                        if (e.keyCode === 27 && last(active) === this) {
+                            e.preventDefault();
+                            this.hide();
+                        }
+                    }), {self: true});
                 }
             }
 
@@ -159,29 +158,15 @@ export default {
 
             handler() {
 
-                let found, {prev} = this;
+                active.splice(active.indexOf(this), 1);
 
-                active = active && active !== this && active || prev;
-
-                if (!active) {
-
+                if (!active.length) {
                     css(document.body, 'overflowY', '');
-
-                } else {
-                    while (prev) {
-
-                        if (prev.clsPage === this.clsPage) {
-                            found = true;
-                            break;
-                        }
-
-                        prev = prev.prev;
-
-                    }
-
                 }
 
-                if (!found) {
+                css(this.$el, 'zIndex', '');
+
+                if (!active.some(modal => modal.clsPage === this.clsPage)) {
                     removeClass(document.documentElement, this.clsPage);
                 }
 
@@ -199,10 +184,6 @@ export default {
 
         show() {
 
-            if (this.isToggled()) {
-                return Promise.resolve();
-            }
-
             if (this.container && this.$el.parentNode !== this.container) {
                 append(this.container, this.$el);
                 return new Promise(resolve =>
@@ -216,46 +197,12 @@ export default {
         },
 
         hide() {
-            return this.isToggled()
-                ? this.toggleElement(this.$el, false, animate(this))
-                : Promise.resolve();
-        },
-
-        getActive() {
-            return active;
+            return this.toggleElement(this.$el, false, animate(this));
         }
 
     }
 
 };
-
-let events;
-
-function registerEvents() {
-
-    if (events) {
-        return;
-    }
-
-    events = [
-        on(document, pointerUp, ({target, defaultPrevented}) => {
-            if (active && active.bgClose && !defaultPrevented && (!active.overlay || within(target, active.$el)) && !within(target, active.panel)) {
-                active.hide();
-            }
-        }),
-        on(document, 'keydown', e => {
-            if (e.keyCode === 27 && active && active.escClose) {
-                e.preventDefault();
-                active.hide();
-            }
-        })
-    ];
-}
-
-function deregisterEvents() {
-    events && events.forEach(unbind => unbind());
-    events = null;
-}
 
 function animate({transitionElement, _toggle}) {
     return (el, show) =>
@@ -266,11 +213,16 @@ function animate({transitionElement, _toggle}) {
 
                 _toggle(el, show);
 
-                if (toMs(css(transitionElement, 'transitionDuration'))) {
-                    once(transitionElement, 'transitionend', resolve, false, e => e.target === transitionElement);
-                } else {
+                const off = once(transitionElement, 'transitionstart', () => {
+                    once(transitionElement, 'transitionend transitioncancel', resolve, {self: true});
+                    clearTimeout(timer);
+                }, {self: true});
+
+                const timer = setTimeout(() => {
+                    off();
                     resolve();
-                }
+                }, toMs(css(transitionElement, 'transitionDuration')));
+
             })
         );
 }

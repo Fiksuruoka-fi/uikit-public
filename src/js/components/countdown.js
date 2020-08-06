@@ -1,5 +1,5 @@
 import Class from '../mixin/class';
-import {$, empty, html} from 'uikit-util';
+import {$, empty, html, inBrowser} from 'uikit-util';
 
 export default {
 
@@ -58,7 +58,7 @@ export default {
 
             name: 'visibilitychange',
 
-            el: document,
+            el: inBrowser && document,
 
             handler() {
                 if (document.hidden) {
@@ -119,8 +119,8 @@ export default {
             this.stop();
 
             if (this.date && this.units.length) {
-                this.$emit();
-                this.timer = setInterval(() => this.$emit(), 1000);
+                this.$update();
+                this.timer = setInterval(this.$update, 1000);
             }
 
         },

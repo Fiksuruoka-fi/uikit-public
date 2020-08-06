@@ -1,10 +1,10 @@
-/*! UIkit 3.1.6 | http://www.getuikit.com | (c) 2014 - 2018 YOOtheme | MIT License */
+/*! UIkit 3.4.6 | https://www.getuikit.com | (c) 2014 - 2020 YOOtheme | MIT License */
 
 (function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('uikit-util')) :
     typeof define === 'function' && define.amd ? define('uikitslider', ['uikit-util'], factory) :
     (global = global || self, global.UIkitSlider = factory(global.UIkit.util));
-}(this, function (uikitUtil) { 'use strict';
+}(this, (function (uikitUtil) { 'use strict';
 
     var Class = {
 
@@ -46,7 +46,7 @@
 
                 name: 'visibilitychange',
 
-                el: document,
+                el: uikitUtil.inBrowser && document,
 
                 filter: function() {
                     return this.autoplay;
@@ -58,34 +58,6 @@
                     } else {
                         this.startAutoplay();
                     }
-                }
-
-            },
-
-            {
-
-                name: 'mouseenter',
-
-                filter: function() {
-                    return this.autoplay && this.pauseOnHover;
-                },
-
-                handler: function() {
-                    this.isHovering = true;
-                }
-
-            },
-
-            {
-
-                name: 'mouseleave',
-
-                filter: function() {
-                    return this.autoplay && this.pauseOnHover;
-                },
-
-                handler: function() {
-                    this.isHovering = false;
                 }
 
             }
@@ -101,8 +73,8 @@
                 this.stopAutoplay();
 
                 this.interval = setInterval(
-                    function () { return !uikitUtil.within(document.activeElement, this$1.$el)
-                        && !this$1.isHovering
+                    function () { return (!this$1.draggable || !uikitUtil.$(':focus', this$1.$el))
+                        && (!this$1.pauseOnHover || !uikitUtil.matches(this$1.$el, ':hover'))
                         && !this$1.stack.length
                         && this$1.show('next'); },
                     this.autoplayInterval
@@ -164,6 +136,7 @@
 
                     if (!this.draggable
                         || !uikitUtil.isTouch(e) && hasTextNodesOnly(e.target)
+                        || uikitUtil.closest(e.target, uikitUtil.selInput)
                         || e.button > 0
                         || this.length < 2
                     ) {
@@ -182,6 +155,9 @@
                 name: 'touchmove',
                 passive: false,
                 handler: 'move',
+                filter: function() {
+                    return uikitUtil.pointerMove === 'touchmove';
+                },
                 delegate: function() {
                     return this.selSlides;
                 }
@@ -231,7 +207,8 @@
                     this$1.unbindMove = null;
                 };
                 uikitUtil.on(window, 'scroll', this.unbindMove);
-                uikitUtil.on(document, uikitUtil.pointerUp, this.end, true);
+                uikitUtil.on(window.visualViewport, 'resize', this.unbindMove);
+                uikitUtil.on(document, (uikitUtil.pointerUp + " " + uikitUtil.pointerCancel), this.end, true);
 
                 uikitUtil.css(this.list, 'userSelect', 'none');
 
@@ -321,6 +298,7 @@
             end: function() {
 
                 uikitUtil.off(window, 'scroll', this.unbindMove);
+                uikitUtil.off(window.visualViewport, 'resize', this.unbindMove);
                 this.unbindMove && this.unbindMove();
                 uikitUtil.off(document, uikitUtil.pointerUp, this.end, true);
 
@@ -396,7 +374,7 @@
 
 
                 if (this.nav && this.length !== this.nav.children.length) {
-                    uikitUtil.html(this.nav, this.slides.map(function (_, i) { return ("<li " + (this$1.attrItem) + "=\"" + i + "\"><a href=\"#\"></a></li>"); }).join(''));
+                    uikitUtil.html(this.nav, this.slides.map(function (_, i) { return ("<li " + (this$1.attrItem) + "=\"" + i + "\"><a href></a></li>"); }).join(''));
                 }
 
                 uikitUtil.toggleClass(uikitUtil.$$(this.selNavItem, this.$el).concat(this.nav), 'uk-hidden', !this.maxIndex);
@@ -465,7 +443,8 @@
             easing: String,
             index: Number,
             finite: Boolean,
-            velocity: Number
+            velocity: Number,
+            selSlides: String
         },
 
         data: function () { return ({
@@ -473,6 +452,7 @@
             finite: false,
             velocity: 1,
             index: 0,
+            prevIndex: -1,
             stack: [],
             percent: 0,
             clsActive: 'uk-active',
@@ -481,16 +461,22 @@
             transitionOptions: {}
         }); },
 
+        connected: function() {
+            this.prevIndex = -1;
+            this.index = this.getValidIndex(this.index);
+            this.stack = [];
+        },
+
+        disconnected: function() {
+            uikitUtil.removeClass(this.slides, this.clsActive);
+        },
+
         computed: {
 
             duration: function(ref, $el) {
                 var velocity = ref.velocity;
 
                 return speedUp($el.offsetWidth / velocity);
-            },
-
-            length: function() {
-                return this.slides.length;
             },
 
             list: function(ref, $el) {
@@ -505,12 +491,25 @@
 
             selSlides: function(ref) {
                 var selList = ref.selList;
+                var selSlides = ref.selSlides;
 
-                return (selList + " > *");
+                return (selList + " " + (selSlides || '> *'));
             },
 
-            slides: function() {
-                return uikitUtil.toNodes(this.list.children);
+            slides: {
+
+                get: function() {
+                    return uikitUtil.$$(this.selSlides, this.$el);
+                },
+
+                watch: function() {
+                    this.$reset();
+                }
+
+            },
+
+            length: function() {
+                return this.slides.length;
             }
 
         },
@@ -556,7 +555,7 @@
                     return;
                 }
 
-                var prevIndex = this.index;
+                var prevIndex = this.getIndex(this.index);
                 var prev = uikitUtil.hasClass(this.slides, this.clsActive) && this.slides[prevIndex];
                 var nextIndex = this.getIndex(index, this.index);
                 var next = this.slides[nextIndex];
@@ -570,8 +569,9 @@
                 this.prevIndex = prevIndex;
                 this.index = nextIndex;
 
-                prev && uikitUtil.trigger(prev, 'beforeitemhide', [this]);
-                if (!uikitUtil.trigger(next, 'beforeitemshow', [this, prev])) {
+                if (prev && !uikitUtil.trigger(prev, 'beforeitemhide', [this])
+                    || !uikitUtil.trigger(next, 'beforeitemshow', [this, prev])
+                ) {
                     this.index = this.prevIndex;
                     reset();
                     return;
@@ -633,7 +633,7 @@
                 );
 
                 if (!force && !prev) {
-                    this._transitioner.translate(1);
+                    this._translate(1);
                     return uikitUtil.Promise.resolve();
                 }
 
@@ -644,7 +644,7 @@
             },
 
             _getDistance: function(prev, next) {
-                return new this._getTransitioner(prev, prev !== next && next).getDistance();
+                return this._getTransitioner(prev, prev !== next && next).getDistance();
             },
 
             _translate: function(percent, prev, next) {
@@ -698,10 +698,11 @@
                     return;
                 }
 
-                var index = this.getValidIndex();
-                delete this.index;
-                uikitUtil.removeClass(this.slides, this.clsActive, this.clsActivated);
-                this.show(index);
+                var index = this.getValidIndex(this.index);
+
+                if (!~this.prevIndex || this.index !== index) {
+                    this.show(index);
+                }
 
             },
 
@@ -729,10 +730,10 @@
 
         var from = prev
             ? getLeft(prev, list, center)
-            : getLeft(next, list, center) + bounds(next).width * dir;
+            : getLeft(next, list, center) + uikitUtil.offset(next).width * dir;
         var to = next
             ? getLeft(next, list, center)
-            : from + bounds(prev).width * dir * (uikitUtil.isRtl ? -1 : 1);
+            : from + uikitUtil.offset(prev).width * dir * (uikitUtil.isRtl ? -1 : 1);
 
         return {
 
@@ -786,7 +787,7 @@
                 uikitUtil.css(list, 'transform', translate(uikitUtil.clamp(
                     -to + (distance - distance * percent),
                     -getWidth(list),
-                    bounds(list).width
+                    uikitUtil.offset(list).width
                 ) * (uikitUtil.isRtl ? -1 : 1), 'px'));
 
                 this.updateTranslates();
@@ -825,7 +826,7 @@
 
                 return uikitUtil.sortBy(slides(list).filter(function (slide) {
                     var slideLeft = getElLeft(slide, list);
-                    return slideLeft >= left && slideLeft + bounds(slide).width <= bounds(list).width + left;
+                    return slideLeft >= left && slideLeft + uikitUtil.offset(slide).width <= uikitUtil.offset(list).width + left;
                 }), 'offsetLeft');
 
             },
@@ -859,27 +860,23 @@
     }
 
     function getMax(list) {
-        return Math.max(0, getWidth(list) - bounds(list).width);
+        return Math.max(0, getWidth(list) - uikitUtil.offset(list).width);
     }
 
     function getWidth(list) {
-        return slides(list).reduce(function (right, el) { return bounds(el).width + right; }, 0);
+        return slides(list).reduce(function (right, el) { return uikitUtil.offset(el).width + right; }, 0);
     }
 
     function getMaxWidth(list) {
-        return slides(list).reduce(function (right, el) { return Math.max(right, bounds(el).width); }, 0);
+        return slides(list).reduce(function (right, el) { return Math.max(right, uikitUtil.offset(el).width); }, 0);
     }
 
     function centerEl(el, list) {
-        return bounds(list).width / 2 - bounds(el).width / 2;
+        return uikitUtil.offset(list).width / 2 - uikitUtil.offset(el).width / 2;
     }
 
     function getElLeft(el, list) {
-        return (uikitUtil.position(el).left + (uikitUtil.isRtl ? bounds(el).width - bounds(list).width : 0)) * (uikitUtil.isRtl ? -1 : 1);
-    }
-
-    function bounds(el) {
-        return el.getBoundingClientRect();
+        return (uikitUtil.position(el).left + (uikitUtil.isRtl ? uikitUtil.offset(el).width - uikitUtil.offset(list).width : 0)) * (uikitUtil.isRtl ? -1 : 1);
     }
 
     function triggerUpdate(el, type, data) {
@@ -887,7 +884,7 @@
     }
 
     function slides(list) {
-        return uikitUtil.toNodes(list.children);
+        return uikitUtil.children(list);
     }
 
     var Component = {
@@ -918,7 +915,7 @@
             finite: function(ref) {
                 var finite = ref.finite;
 
-                return finite || getWidth(this.list) < bounds(this.list).width + getMaxWidth(this.list) + this.center;
+                return finite || Math.ceil(getWidth(this.list)) < uikitUtil.offset(this.list).width + getMaxWidth(this.list) + this.center;
             },
 
             maxIndex: function() {
@@ -928,7 +925,7 @@
                 }
 
                 if (this.center) {
-                    return this.sets[this.sets.length - 1];
+                    return uikitUtil.last(this.sets);
                 }
 
                 uikitUtil.css(this.slides, 'order', '');
@@ -950,7 +947,7 @@
                 var sets = ref.sets;
 
 
-                var width = bounds(this.list).width / (this.center ? 2 : 1);
+                var width = uikitUtil.offset(this.list).width / (this.center ? 2 : 1);
 
                 var left = 0;
                 var leftCenter = width;
@@ -958,7 +955,7 @@
 
                 sets = sets && this.slides.reduce(function (sets, slide, i) {
 
-                    var ref = bounds(slide);
+                    var ref = uikitUtil.offset(slide);
                     var slideWidth = ref.width;
                     var slideRight = slideLeft + slideWidth;
 
@@ -971,7 +968,7 @@
                         if (!uikitUtil.includes(sets, i)) {
 
                             var cmp = this$1.slides[i + 1];
-                            if (this$1.center && cmp && slideWidth < leftCenter - bounds(cmp).width / 2) {
+                            if (this$1.center && cmp && slideWidth < leftCenter - uikitUtil.offset(cmp).width / 2) {
                                 leftCenter -= slideWidth;
                             } else {
                                 leftCenter = width;
@@ -1016,6 +1013,15 @@
                     this$1.maxIndex && uikitUtil.toggleClass(el, 'uk-hidden', uikitUtil.isNumeric(index) && (this$1.sets && !uikitUtil.includes(this$1.sets, uikitUtil.toFloat(index)) || index > this$1.maxIndex));
                 });
 
+                if (this.length && !this.dragging && !this.stack.length) {
+                    this.reorder();
+                    this._translate(1);
+                }
+
+                var actives = this._getTransitioner(this.index).getActives();
+                this.slides.forEach(function (slide) { return uikitUtil.toggleClass(slide, this$1.clsActive, uikitUtil.includes(actives, slide)); });
+                (!this.sets || uikitUtil.includes(this.sets, uikitUtil.toFloat(this.index))) && this.slides.forEach(function (slide) { return uikitUtil.toggleClass(slide, this$1.clsActivated, uikitUtil.includes(actives, slide)); });
+
             },
 
             events: ['resize']
@@ -1047,7 +1053,7 @@
                 }
 
                 this.duration = speedUp(this.avgWidth / this.velocity)
-                    * (bounds(
+                    * (uikitUtil.offset(
                         this.dir < 0 || !this.slides[this.prevIndex]
                             ? this.slides[this.index]
                             : this.slides[this.prevIndex]
@@ -1058,15 +1064,7 @@
             },
 
             itemshow: function() {
-                !uikitUtil.isUndefined(this.prevIndex) && uikitUtil.addClass(this._getTransitioner().getItemIn(), this.clsActive);
-            },
-
-            itemshown: function() {
-                var this$1 = this;
-
-                var actives = this._getTransitioner(this.index).getActives();
-                this.slides.forEach(function (slide) { return uikitUtil.toggleClass(slide, this$1.clsActive, uikitUtil.includes(actives, slide)); });
-                (!this.sets || uikitUtil.includes(this.sets, uikitUtil.toFloat(this.index))) && this.slides.forEach(function (slide) { return uikitUtil.toggleClass(slide, this$1.clsActivated, uikitUtil.includes(actives, slide)); });
+                ~this.prevIndex && uikitUtil.addClass(this._getTransitioner().getItemIn(), this.clsActive);
             }
 
         },
@@ -1077,9 +1075,8 @@
                 var this$1 = this;
 
 
-                uikitUtil.css(this.slides, 'order', '');
-
                 if (this.finite) {
+                    uikitUtil.css(this.slides, 'order', '');
                     return;
                 }
 
@@ -1098,7 +1095,7 @@
                 }
 
                 var next = this.slides[index];
-                var width = bounds(this.list).width / 2 - bounds(next).width / 2;
+                var width = uikitUtil.offset(this.list).width / 2 - uikitUtil.offset(next).width / 2;
                 var j = 0;
 
                 while (width > 0) {
@@ -1106,7 +1103,7 @@
                     var slide = this.slides[slideIndex];
 
                     uikitUtil.css(slide, 'order', slideIndex > index ? -2 : -1);
-                    width -= bounds(slide).width;
+                    width -= uikitUtil.offset(slide).width;
                 }
 
             },
@@ -1142,12 +1139,10 @@
 
     };
 
-    /* global UIkit, 'slider' */
-
     if (typeof window !== 'undefined' && window.UIkit) {
         window.UIkit.component('slider', Component);
     }
 
     return Component;
 
-}));
+})));

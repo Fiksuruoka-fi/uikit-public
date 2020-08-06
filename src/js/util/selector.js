@@ -1,5 +1,6 @@
+import {inBrowser} from './env';
 import {removeAttr} from './attr';
-import {isDocument, isNode, isString, startsWith, toNode, toNodes} from './lang';
+import {isDocument, isElement, isString, noop, startsWith, toNode, toNodes} from './lang';
 
 export function query(selector, context) {
     return toNode(selector) || find(selector, getContext(selector, context));
@@ -45,7 +46,7 @@ function _query(selector, context = document, queryFn) {
             if (selector[0] === '!') {
 
                 const selectors = selector.substr(1).trim().split(' ');
-                ctx = closest(context.parentNode, selectors[0]);
+                ctx = closest(parent(context), selectors[0]);
                 selector = selectors.slice(1).join(' ').trim();
 
             }
@@ -105,8 +106,8 @@ function splitSelector(selector) {
     return selector.match(selectorRe).map(selector => selector.replace(/,$/, '').trim());
 }
 
-const elProto = Element.prototype;
-const matchesFn = elProto.matches || elProto.webkitMatchesSelector || elProto.msMatchesSelector;
+const elProto = inBrowser ? Element.prototype : {};
+const matchesFn = elProto.matches || elProto.webkitMatchesSelector || elProto.msMatchesSelector || noop;
 
 export function matches(element, selector) {
     return toNodes(element).some(element => matchesFn.call(element, selector));
@@ -121,9 +122,7 @@ const closestFn = elProto.closest || function (selector) {
             return ancestor;
         }
 
-        ancestor = ancestor.parentNode;
-
-    } while (ancestor && ancestor.nodeType === 1);
+    } while ((ancestor = parent(ancestor)));
 };
 
 export function closest(element, selector) {
@@ -132,28 +131,17 @@ export function closest(element, selector) {
         selector = selector.slice(1);
     }
 
-    return isNode(element)
-        ? element.parentNode && closestFn.call(element, selector)
+    return isElement(element)
+        ? closestFn.call(element, selector)
         : toNodes(element).map(element => closest(element, selector)).filter(Boolean);
 }
 
-export function parents(element, selector) {
-    const elements = [];
-    let parent = toNode(element).parentNode;
-
-    while (parent && parent.nodeType === 1) {
-
-        if (matches(parent, selector)) {
-            elements.push(parent);
-        }
-
-        parent = parent.parentNode;
-    }
-
-    return elements;
+export function parent(element) {
+    element = toNode(element);
+    return element && isElement(element.parentNode) && element.parentNode;
 }
 
-const escapeFn = window.CSS && CSS.escape || function (css) { return css.replace(/([^\x7f-\uFFFF\w-])/g, match => `\\${match}`); };
+const escapeFn = inBrowser && window.CSS && CSS.escape || function (css) { return css.replace(/([^\x7f-\uFFFF\w-])/g, match => `\\${match}`); };
 export function escape(css) {
     return isString(css) ? escapeFn.call(null, css) : '';
 }
