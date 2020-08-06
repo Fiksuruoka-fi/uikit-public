@@ -1,5 +1,73 @@
 # Changelog
 
+## 3.5.5 (July 14, 2020)
+
+### Added
+
+- Add list marker utility support for WebKit
+- Add `uk-text-default` to Text component 
+- Add multiple targets to Filter component
+
+### Fixed
+
+- Updates no longer throw error after too many recursions, but delay into next frame
+- Fix empty slider throws exception
+- Fix pointer events ignored on SVGs in Sortable component
+- Fix Grid component divider rendering
+- Fix `<select>` closes Drop component in hover mode in Firefox 
+
+## 3.5.4 (June 12, 2020)
+
+### Added
+
+- Image component triggers 'error' event on failing to load image
+
+### Fixed
+
+- Fix prop observer for dataSrc option in Image component
+- Fix ajax function supports responseType 'json' in IE 11 
+- Fix Accordion component with `multiple: true` and `collapsible: false`
+
+## 3.5.3 (May 29, 2020)
+
+### Fixed
+
+- Fix regression in Grid component with parallax option
+
+## 3.5.2 (May 29, 2020)
+
+### Fixed
+
+- Fix uglifyjs removes self-assignments
+
+## 3.5.1 (May 29, 2020)
+
+### Fixed
+
+- Fix regression in Animation API
+- Fix regression Drop component
+- Fix regression in Sass source
+
+## 3.5.0 (May 28, 2020)
+
+### Added
+
+- Add type, color and size modifiers to List component
+
+### Changed
+
+- IMPORTANT: Renamed Less variable parts `xxlarge` to `2xlarge`
+- Replace clearfix by creating a block formatting context with display flow-root
+
+### Deprecated
+
+- Width XXLarge: Use `uk-width-2xlarge` instead of `uk-width-xxlarge`
+
+### Fixed
+
+- Fix positioning issue with Drop components in Firefox
+- Fix Dropbar causing endless loop in Firefox
+
 ## 3.4.6 (May 11, 2020)
 
 ### Fixed
@@ -26,10 +94,6 @@
 - Fix regression in Grid component with masonry
 
 ## 3.4.3 (May 5, 2020)
-
-### Added
-
-- Add list collapse modifier
 
 ### Changed
 
