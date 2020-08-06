@@ -77,7 +77,7 @@ export function positionAt(element, target, elAttach, targetAttach, elOffset, ta
 
                 function apply(elemOffset, targetOffset) {
 
-                    const newVal = position[align] + elemOffset + targetOffset - elOffset[dir] * 2;
+                    const newVal = (position[align] + elemOffset + targetOffset - elOffset[dir] * 2).toFixed(4);
 
                     if (newVal >= boundary[align] && newVal + dim[prop] <= boundary[alignFlip]) {
                         position[align] = newVal;
@@ -111,7 +111,7 @@ export function offset(element, coordinates) {
         return getDimensions(element);
     }
 
-    const currentOffset = offset(element);
+    const currentOffset = getDimensions(element);
     const pos = css(element, 'position');
 
     ['left', 'top'].forEach(prop => {
@@ -182,7 +182,7 @@ function getDimensions(element) {
 
 export function position(element, parent) {
 
-    parent = parent || toNode(element).offsetParent || toWindow(element).document.documentElement;
+    parent = parent || (toNode(element) || {}).offsetParent || toWindow(element).document.documentElement;
 
     const elementOffset = offset(element);
     const parentOffset = offset(parent);
