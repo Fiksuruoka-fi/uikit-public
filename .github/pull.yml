@@ -1,0 +1,6 @@
+version: "1"
+rules:                      # Array of rules
+  - base: update            # Required. Target branch
+    upstream: uikit/master    # Required. Must be in the same fork network.
+label: ":arrow_heading_down: pull"  # Optional
+conflictLabel: "merge-conflict"     # Optional, on merge conflict assign a custom label, Default: merge-conflict
