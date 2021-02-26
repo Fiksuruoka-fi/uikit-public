@@ -3,7 +3,7 @@
 (function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('uikit-util')) :
     typeof define === 'function' && define.amd ? define('uikitlightbox', ['uikit-util'], factory) :
-    (global = global || self, global.UIkitLightbox = factory(global.UIkit.util));
+    (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.UIkitLightbox = factory(global.UIkit.util));
 }(this, (function (uikitUtil) { 'use strict';
 
     var Animations = {
@@ -1428,7 +1428,7 @@
         computed: {
 
             caption: function(ref, $el) {
-                var selCaption = ref.selCaption;
+                ref.selCaption;
 
                 return uikitUtil.$('.uk-lightbox-caption', $el);
             }

@@ -3,7 +3,7 @@
 (function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
     typeof define === 'function' && define.amd ? define('uikit', factory) :
-    (global = global || self, global.UIkit = factory());
+    (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.UIkit = factory());
 }(this, (function () { 'use strict';
 
     var objPrototype = Object.prototype;
@@ -798,12 +798,12 @@
 
     /* global setImmediate */
 
-    var Promise = inBrowser && window.Promise || PromiseFn;
+    var Promise$1 = inBrowser && window.Promise || PromiseFn;
 
     var Deferred = function() {
         var this$1 = this;
 
-        this.promise = new Promise(function (resolve, reject) {
+        this.promise = new Promise$1(function (resolve, reject) {
             this$1.reject = reject;
             this$1.resolve = resolve;
         });
@@ -995,7 +995,7 @@
     };
 
     function ajax(url, options) {
-        return new Promise(function (resolve, reject) {
+        return new Promise$1(function (resolve, reject) {
 
             var env = assign({
                 data: null,
@@ -1055,7 +1055,7 @@
 
     function getImage(src, srcset, sizes) {
 
-        return new Promise(function (resolve, reject) {
+        return new Promise$1(function (resolve, reject) {
             var img = new Image();
 
             img.onerror = function (e) { return reject(e); };
@@ -1490,7 +1490,7 @@
         if ( timing === void 0 ) timing = 'linear';
 
 
-        return Promise.all(toNodes(element).map(function (element) { return new Promise(function (resolve, reject) {
+        return Promise$1.all(toNodes(element).map(function (element) { return new Promise$1(function (resolve, reject) {
 
                 for (var name in props) {
                     var value = css(element, name);
@@ -1532,7 +1532,7 @@
 
         stop: function(element) {
             trigger(element, 'transitionend');
-            return Promise.resolve();
+            return Promise$1.resolve();
         },
 
         cancel: function(element) {
@@ -1551,7 +1551,7 @@
         if ( duration === void 0 ) duration = 200;
 
 
-        return Promise.all(toNodes(element).map(function (element) { return new Promise(function (resolve, reject) {
+        return Promise$1.all(toNodes(element).map(function (element) { return new Promise$1(function (resolve, reject) {
 
                 trigger(element, 'animationcancel');
                 var timer = setTimeout(function () { return trigger(element, 'animationend'); }, duration);
@@ -2000,7 +2000,7 @@
 
         fastdom.scheduled = true;
         if (recursion && recursion < RECURSION_LIMIT) {
-            Promise.resolve().then(function () { return flush(recursion); });
+            Promise$1.resolve().then(function () { return flush(recursion); });
         } else {
             requestAnimationFrame(function () { return flush(); });
         }
@@ -2318,7 +2318,7 @@
 
         if (youtube || vimeo) {
 
-            return this.ready = new Promise(function (resolve) {
+            return this.ready = new Promise$1(function (resolve) {
 
                 once(this$1.el, 'load', function () {
                     if (youtube) {
@@ -2340,7 +2340,7 @@
 
         }
 
-        return Promise.resolve();
+        return Promise$1.resolve();
 
     };
 
@@ -2405,7 +2405,7 @@
 
     function listen(cb) {
 
-        return new Promise(function (resolve) { return once(window, 'message', function (_, data) { return resolve(data); }, false, function (ref) {
+        return new Promise$1(function (resolve) { return once(window, 'message', function (_, data) { return resolve(data); }, false, function (ref) {
                 var data = ref.data;
 
 
@@ -2471,9 +2471,9 @@
 
         var parents = overflowParents(element).concat(element);
 
-        var promise = Promise.resolve();
+        var promise = Promise$1.resolve();
         var loop = function ( i ) {
-            promise = promise.then(function () { return new Promise(function (resolve) {
+            promise = promise.then(function () { return new Promise$1(function (resolve) {
 
                     var scrollElement = parents[i];
                     var element = parents[i + 1];
@@ -2758,7 +2758,7 @@
         mergeOptions: mergeOptions,
         parseOptions: parseOptions,
         Player: Player,
-        Promise: Promise,
+        Promise: Promise$1,
         Deferred: Deferred,
         IntersectionObserver: IntersectionObserver,
         query: query,
@@ -3297,7 +3297,7 @@
 
         function normalizeData(ref, ref$1) {
             var data = ref.data;
-            var el = ref.el;
+            ref.el;
             var args = ref$1.args;
             var props = ref$1.props; if ( props === void 0 ) props = {};
 
@@ -3794,7 +3794,7 @@
             toggleElement: function(targets, show, animate) {
                 var this$1 = this;
 
-                return Promise.all(toNodes(targets).map(function (el) { return new Promise(function (resolve) { return this$1._toggleElement(el, show, animate).then(resolve, noop); }
+                return Promise$1.all(toNodes(targets).map(function (el) { return new Promise$1(function (resolve) { return this$1._toggleElement(el, show, animate).then(resolve, noop); }
                     ); }
                 ));
             },
@@ -3825,7 +3825,7 @@
                             : !this.isToggled(el);
 
                 if (!trigger(el, ("before" + (show ? 'show' : 'hide')), [this])) {
-                    return Promise.reject();
+                    return Promise$1.reject();
                 }
 
                 var promise = (
@@ -3845,7 +3845,7 @@
                     this$1.$update(el);
                 };
 
-                return (promise || Promise.resolve()).then(final);
+                return (promise || Promise$1.resolve()).then(final);
             },
 
             _toggle: function(el, toggled) {
@@ -5480,7 +5480,7 @@
             getSvg: function() {
                 var this$1 = this;
 
-                return loadSVG(this.src).then(function (svg) { return parseSVG(svg, this$1.icon) || Promise.reject('SVG not found.'); }
+                return loadSVG(this.src).then(function (svg) { return parseSVG(svg, this$1.icon) || Promise$1.reject('SVG not found.'); }
                 );
             },
 
@@ -5542,7 +5542,7 @@
             return svgs[src];
         }
 
-        return svgs[src] = new Promise(function (resolve, reject) {
+        return svgs[src] = new Promise$1(function (resolve, reject) {
 
             if (!src) {
                 reject();
@@ -5715,10 +5715,10 @@
                 var icon = getIcon(this.icon);
 
                 if (!icon) {
-                    return Promise.reject('Icon not found.');
+                    return Promise$1.reject('Icon not found.');
                 }
 
-                return Promise.resolve(icon);
+                return Promise$1.resolve(icon);
             }
 
         }
@@ -6337,7 +6337,7 @@
                     }
 
                     if (!this.stack && active$1.length) {
-                        Promise.all(active$1.map(function (modal) { return modal.hide(); })).then(this.show);
+                        Promise$1.all(active$1.map(function (modal) { return modal.hide(); })).then(this.show);
                         e.preventDefault();
                     } else {
                         active$1.push(this);
@@ -6438,7 +6438,7 @@
 
                 if (this.container && this.$el.parentNode !== this.container) {
                     append(this.container, this.$el);
-                    return new Promise(function (resolve) { return requestAnimationFrame(function () { return this$1.show().then(resolve); }
+                    return new Promise$1(function (resolve) { return requestAnimationFrame(function () { return this$1.show().then(resolve); }
                         ); }
                     );
                 }
@@ -6458,7 +6458,7 @@
         var transitionElement = ref.transitionElement;
         var _toggle = ref._toggle;
 
-        return function (el, show) { return new Promise(function (resolve, reject) { return once(el, 'show hide', function () {
+        return function (el, show) { return new Promise$1(function (resolve, reject) { return once(el, 'show hide', function () {
                     el._reject && el._reject();
                     el._reject = reject;
 
@@ -6539,7 +6539,7 @@
 
             dialog.show();
 
-            on(dialog.$el, 'hidden', function () { return Promise.resolve().then(function () { return dialog.$destroy(true); }
+            on(dialog.$el, 'hidden', function () { return Promise$1.resolve().then(function () { return dialog.$destroy(true); }
                 ); }, {self: true}
             );
 
@@ -6878,7 +6878,7 @@
                 height(dropbar, oldHeight);
 
                 Transition.cancel([el, dropbar]);
-                return Promise.all([
+                return Promise$1.all([
                     Transition.start(dropbar, {height: newHeight}, this.duration),
                     Transition.start(el, {clip: ("rect(0," + (el.offsetWidth) + "px," + newHeight + "px,0)")}, this.duration)
                 ])
@@ -7395,7 +7395,7 @@
 
                             state.queued = true;
 
-                            data.promise = (data.promise || Promise.resolve()).then(function () { return new Promise(function (resolve) { return setTimeout(resolve, this$1.delay); }
+                            data.promise = (data.promise || Promise$1.resolve()).then(function () { return new Promise$1(function (resolve) { return setTimeout(resolve, this$1.delay); }
                                 ); }
                             ).then(function () {
                                 toggle(true);
@@ -8508,7 +8508,7 @@
                 css(target, {height: oldHeight, display: 'block'});
                 scrollTop(window, oldScrollY);
 
-                return Promise.all(
+                return Promise$1.all(
                     children$1.map(function (el, i) { return ['top', 'left', 'height', 'width'].some(function (prop) { return propsFrom[i][prop] !== propsTo[i][prop]; }
                         ) && Transition.start(el, propsTo[i], this$1.animation, 'ease'); }
                     ).concat(oldHeight !== newHeight && Transition.start(target, {height: newHeight}, this.animation, 'ease'))
@@ -8599,7 +8599,7 @@
             toggles: {
 
                 get: function(ref, $el) {
-                    var attrItem = ref.attrItem;
+                    ref.attrItem;
 
                     return $$(("[" + (this.attrItem) + "],[data-" + (this.attrItem) + "]"), $el);
                 },
@@ -8684,7 +8684,7 @@
 
                 this.toggles.forEach(function (el) { return toggleClass(el, this$1.cls, !!matchFilter(el, this$1.attrItem, state)); });
 
-                Promise.all($$(this.target, this.$el).map(function (target) {
+                Promise$1.all($$(this.target, this.$el).map(function (target) {
                     var children$1 = children(target);
                     return animate
                         ? this$1.animate(function () { return applyState(state, target, children$1); }, target)
@@ -8915,7 +8915,7 @@
                 triggerUpdate(next, 'itemin', {percent: percent, duration: duration, timing: timing, dir: dir});
                 triggerUpdate(prev, 'itemout', {percent: 1 - percent, duration: duration, timing: timing, dir: dir});
 
-                Promise.all([
+                Promise$1.all([
                     Transition.start(next, props[1], duration, timing),
                     Transition.start(prev, props[0], duration, timing)
                 ]).then(function () {
@@ -9544,7 +9544,7 @@
                     prev && trigger(prev, 'itemhidden', [this$1]);
                     trigger(next, 'itemshown', [this$1]);
 
-                    return new Promise(function (resolve) {
+                    return new Promise$1(function (resolve) {
                         fastdom.write(function () {
                             stack.shift();
                             if (stack.length) {
@@ -9596,7 +9596,7 @@
 
                 if (!force && !prev) {
                     this._translate(1);
-                    return Promise.resolve();
+                    return Promise$1.resolve();
                 }
 
                 var ref = this.stack;
@@ -9753,7 +9753,7 @@
         computed: {
 
             caption: function(ref, $el) {
-                var selCaption = ref.selCaption;
+                ref.selCaption;
 
                 return $('.uk-lightbox-caption', $el);
             }
