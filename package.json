@@ -37,7 +37,7 @@
     "@rollup/plugin-alias": "^3.1.0",
     "@rollup/plugin-buble": "^0.21.3",
     "@rollup/plugin-replace": "^2.3.2",
-    "archiver": "5.2.0",
+    "archiver": "5.3.0",
     "clean-css": "^4.2.3",
     "dateformat": "^3.0.3",
     "eslint": "7.20.0",
